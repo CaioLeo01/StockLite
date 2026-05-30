@@ -1,0 +1,61 @@
+package com.example.stocklite.presentation.exception;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+
+import com.example.stocklite.application.dto.ErrorResponse;
+import com.example.stocklite.application.exception.DefaultProfileNotFoundException;
+import com.example.stocklite.application.exception.EmailAlreadyInUseException;
+
+@RestControllerAdvice
+public class GlobalExceptionHandler {
+
+	private static final String MENSAGEM_EMAIL_NAO_PROCESSADO =
+			"Nao foi possivel concluir o cadastro com o email informado.";
+	private static final String MENSAGEM_ERRO_INTERNO =
+			"Ocorreu um erro interno ao processar a solicitacao.";
+
+	@ExceptionHandler(MethodArgumentNotValidException.class)
+	public ResponseEntity<ErrorResponse> handleValidationException(MethodArgumentNotValidException exception) {
+		String mensagem = montarMensagemValidacao(exception);
+		return criarResposta(HttpStatus.BAD_REQUEST, mensagem);
+	}
+
+	@ExceptionHandler(EmailAlreadyInUseException.class)
+	public ResponseEntity<ErrorResponse> handleEmailAlreadyInUse(EmailAlreadyInUseException exception) {
+		return criarResposta(HttpStatus.CONFLICT, MENSAGEM_EMAIL_NAO_PROCESSADO);
+	}
+
+	@ExceptionHandler(DefaultProfileNotFoundException.class)
+	public ResponseEntity<ErrorResponse> handleDefaultProfileNotFound(DefaultProfileNotFoundException exception) {
+		return criarResposta(HttpStatus.INTERNAL_SERVER_ERROR, MENSAGEM_ERRO_INTERNO);
+	}
+
+	@ExceptionHandler(Exception.class)
+	public ResponseEntity<ErrorResponse> handleUnexpectedException(Exception exception) {
+		return criarResposta(HttpStatus.INTERNAL_SERVER_ERROR, MENSAGEM_ERRO_INTERNO);
+	}
+
+	private String montarMensagemValidacao(MethodArgumentNotValidException exception) {
+		StringBuilder mensagem = new StringBuilder();
+
+		for (FieldError fieldError : exception.getBindingResult().getFieldErrors()) {
+			if (!mensagem.isEmpty()) {
+				mensagem.append(" ");
+			}
+
+			mensagem.append(fieldError.getDefaultMessage());
+		}
+
+		return mensagem.toString();
+	}
+
+	private ResponseEntity<ErrorResponse> criarResposta(HttpStatus status, String mensagem) {
+		ErrorResponse errorResponse = new ErrorResponse(mensagem);
+		return ResponseEntity.status(status).body(errorResponse);
+	}
+}
