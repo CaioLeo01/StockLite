@@ -9,8 +9,8 @@ Este projeto habilita o Swagger apenas no profile `dev`.
 
 Link em `dev`:
 
-- Swagger UI: `http://localhost:8080/swagger-ui.html`
-- OpenAPI JSON: `http://localhost:8080/v3/api-docs`
+- Swagger UI: `http://localhost:8080/v1/api/swagger-ui/index.html`
+- OpenAPI JSON: `http://localhost:8080/v1/api/v3/api-docs`
 
 ## Como subir a aplicacao em dev
 
