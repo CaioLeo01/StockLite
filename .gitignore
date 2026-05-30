@@ -32,6 +32,8 @@ build/
 ### VS Code ###
 .vscode/
 
+#### Codex ###
+.codex
 
 
 ### .env files ###
