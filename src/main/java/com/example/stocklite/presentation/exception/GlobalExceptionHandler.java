@@ -10,6 +10,8 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import com.example.stocklite.application.dto.ErrorResponse;
 import com.example.stocklite.application.exception.DefaultProfileNotFoundException;
 import com.example.stocklite.application.exception.EmailAlreadyInUseException;
+import com.example.stocklite.application.exception.InvalidCredentialsException;
+import com.example.stocklite.application.exception.UserAccessDeniedException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -28,6 +30,16 @@ public class GlobalExceptionHandler {
 	@ExceptionHandler(EmailAlreadyInUseException.class)
 	public ResponseEntity<ErrorResponse> handleEmailAlreadyInUse(EmailAlreadyInUseException exception) {
 		return criarResposta(HttpStatus.CONFLICT, MENSAGEM_EMAIL_NAO_PROCESSADO);
+	}
+
+	@ExceptionHandler(InvalidCredentialsException.class)
+	public ResponseEntity<ErrorResponse> handleInvalidCredentials(InvalidCredentialsException exception) {
+		return criarResposta(HttpStatus.UNAUTHORIZED, exception.getMessage());
+	}
+
+	@ExceptionHandler(UserAccessDeniedException.class)
+	public ResponseEntity<ErrorResponse> handleUserAccessDenied(UserAccessDeniedException exception) {
+		return criarResposta(HttpStatus.FORBIDDEN, exception.getMessage());
 	}
 
 	@ExceptionHandler(DefaultProfileNotFoundException.class)

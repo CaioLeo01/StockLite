@@ -10,6 +10,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.example.stocklite.application.dto.RegisterRequest;
 import com.example.stocklite.application.dto.RegisterResponse;
+import com.example.stocklite.application.dto.LoginRequest;
+import com.example.stocklite.application.dto.LoginResponse;
+import com.example.stocklite.application.usecase.LoginService;
 import com.example.stocklite.application.usecase.RegisterUserService;
 
 import jakarta.validation.Valid;
@@ -20,14 +23,22 @@ import jakarta.validation.Valid;
 public class AuthController {
 
 	private final RegisterUserService registerUserService;
+	private final LoginService loginService;
 
-	public AuthController(RegisterUserService registerUserService) {
+	public AuthController(RegisterUserService registerUserService, LoginService loginService) {
 		this.registerUserService = registerUserService;
+		this.loginService = loginService;
 	}
 
 	@PostMapping("/register")
 	public ResponseEntity<RegisterResponse> registrar(@Valid @RequestBody RegisterRequest request) {
 		RegisterResponse response = registerUserService.registrar(request);
 		return ResponseEntity.status(HttpStatus.CREATED).body(response);
+	}
+
+	@PostMapping("/login")
+	public ResponseEntity<LoginResponse> autenticar(@Valid @RequestBody LoginRequest request) {
+		LoginResponse response = loginService.autenticar(request);
+		return ResponseEntity.ok(response);
 	}
 }

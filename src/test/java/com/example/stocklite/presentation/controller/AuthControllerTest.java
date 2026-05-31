@@ -15,7 +15,11 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.example.stocklite.application.dto.RegisterResponse;
+import com.example.stocklite.application.dto.LoginResponse;
 import com.example.stocklite.application.exception.EmailAlreadyInUseException;
+import com.example.stocklite.application.exception.InvalidCredentialsException;
+import com.example.stocklite.application.exception.UserAccessDeniedException;
+import com.example.stocklite.application.usecase.LoginService;
 import com.example.stocklite.application.usecase.RegisterUserService;
 import com.example.stocklite.presentation.exception.GlobalExceptionHandler;
 
@@ -28,6 +32,9 @@ class AuthControllerTest {
 
 	@MockitoBean
 	private RegisterUserService registerUserService;
+
+	@MockitoBean
+	private LoginService loginService;
 
 	@Test
 	void deveRegistrarUsuarioComSucesso() throws Exception {
@@ -85,5 +92,69 @@ class AuthControllerTest {
 						"""))
 				.andExpect(status().isConflict())
 				.andExpect(jsonPath("$.mensagem").value("Nao foi possivel concluir o cadastro com o email informado."));
+	}
+
+	@Test
+	void deveAutenticarUsuarioComSucesso() throws Exception {
+		LoginResponse response = new LoginResponse("Bearer jwt-gerado");
+
+		when(loginService.autenticar(any())).thenReturn(response);
+
+		mockMvc.perform(post("/v1/api/auth/login")
+				.contentType(APPLICATION_JSON)
+				.content("""
+						{
+						  "email": "joao@email.com",
+						  "senha": "SenhaForte@123"
+						}
+						"""))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.token").value("Bearer jwt-gerado"));
+	}
+
+	@Test
+	void deveRetornarBadRequestQuandoPayloadDeLoginForInvalido() throws Exception {
+		mockMvc.perform(post("/v1/api/auth/login")
+				.contentType(APPLICATION_JSON)
+				.content("""
+						{
+						  "email": "email-invalido",
+						  "senha": ""
+						}
+						"""))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.mensagem").isString());
+	}
+
+	@Test
+	void deveRetornarUnauthorizedQuandoCredenciaisForemInvalidas() throws Exception {
+		when(loginService.autenticar(any())).thenThrow(new InvalidCredentialsException());
+
+		mockMvc.perform(post("/v1/api/auth/login")
+				.contentType(APPLICATION_JSON)
+				.content("""
+						{
+						  "email": "joao@email.com",
+						  "senha": "SenhaErrada@123"
+						}
+						"""))
+				.andExpect(status().isUnauthorized())
+				.andExpect(jsonPath("$.mensagem").value("Email ou senha invalidos."));
+	}
+
+	@Test
+	void deveRetornarForbiddenQuandoUsuarioNaoTiverAcesso() throws Exception {
+		when(loginService.autenticar(any())).thenThrow(new UserAccessDeniedException());
+
+		mockMvc.perform(post("/v1/api/auth/login")
+				.contentType(APPLICATION_JSON)
+				.content("""
+						{
+						  "email": "joao@email.com",
+						  "senha": "SenhaForte@123"
+						}
+						"""))
+				.andExpect(status().isForbidden())
+				.andExpect(jsonPath("$.mensagem").value("Usuario sem permissao para acessar o sistema."));
 	}
 }
