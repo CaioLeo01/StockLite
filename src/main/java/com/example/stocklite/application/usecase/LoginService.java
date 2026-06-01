@@ -20,7 +20,6 @@ import com.example.stocklite.domain.repository.UsuarioRepository;
 public class LoginService {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(LoginService.class);
-	private static final String PREFIXO_BEARER = "Bearer ";
 
 	private final UsuarioRepository usuarioRepository;
 	private final PasswordHasher passwordHasher;
@@ -57,7 +56,7 @@ public class LoginService {
 		validarPerfil(usuario.getPerfil());
 		String token = tokenService.generateToken(usuario);
 
-		return new LoginResponse(PREFIXO_BEARER + token);
+		return new LoginResponse(token);
 	}
 
 	private String normalizarEmail(String email) {

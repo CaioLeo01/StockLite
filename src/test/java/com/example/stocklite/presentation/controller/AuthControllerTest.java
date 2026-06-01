@@ -19,12 +19,23 @@ import com.example.stocklite.application.dto.LoginResponse;
 import com.example.stocklite.application.exception.EmailAlreadyInUseException;
 import com.example.stocklite.application.exception.InvalidCredentialsException;
 import com.example.stocklite.application.exception.UserAccessDeniedException;
+import com.example.stocklite.application.port.TokenService;
 import com.example.stocklite.application.usecase.LoginService;
 import com.example.stocklite.application.usecase.RegisterUserService;
+import com.example.stocklite.infrastructure.config.SecurityConfig;
+import com.example.stocklite.infrastructure.security.JwtAuthenticationFilter;
+import com.example.stocklite.infrastructure.security.RestAccessDeniedHandler;
+import com.example.stocklite.infrastructure.security.RestAuthenticationEntryPoint;
 import com.example.stocklite.presentation.exception.GlobalExceptionHandler;
 
 @WebMvcTest(AuthController.class)
-@Import(GlobalExceptionHandler.class)
+@Import({
+		GlobalExceptionHandler.class,
+		SecurityConfig.class,
+		JwtAuthenticationFilter.class,
+		RestAuthenticationEntryPoint.class,
+		RestAccessDeniedHandler.class
+})
 class AuthControllerTest {
 
 	@Autowired
@@ -35,6 +46,9 @@ class AuthControllerTest {
 
 	@MockitoBean
 	private LoginService loginService;
+
+	@MockitoBean
+	private TokenService tokenService;
 
 	@Test
 	void deveRegistrarUsuarioComSucesso() throws Exception {
@@ -96,7 +110,7 @@ class AuthControllerTest {
 
 	@Test
 	void deveAutenticarUsuarioComSucesso() throws Exception {
-		LoginResponse response = new LoginResponse("Bearer jwt-gerado");
+		LoginResponse response = new LoginResponse("jwt-gerado");
 
 		when(loginService.autenticar(any())).thenReturn(response);
 
@@ -109,7 +123,7 @@ class AuthControllerTest {
 						}
 						"""))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.token").value("Bearer jwt-gerado"));
+				.andExpect(jsonPath("$.token").value("jwt-gerado"));
 	}
 
 	@Test
