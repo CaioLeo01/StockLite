@@ -30,4 +30,12 @@ public class Usuario {
 	private OffsetDateTime dataCriacao;
 
 	private OffsetDateTime dataAtualizacao;
+
+	public void inativar() {
+		this.ativo = Boolean.FALSE;
+	}
+
+	public boolean estaInativo() {
+		return !Boolean.TRUE.equals(this.ativo);
+	}
 }

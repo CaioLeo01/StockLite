@@ -2,6 +2,8 @@ package com.example.stocklite.presentation.exception;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -11,7 +13,9 @@ import com.example.stocklite.application.dto.ErrorResponse;
 import com.example.stocklite.application.exception.DefaultProfileNotFoundException;
 import com.example.stocklite.application.exception.EmailAlreadyInUseException;
 import com.example.stocklite.application.exception.InvalidCredentialsException;
+import com.example.stocklite.application.exception.SelfUserDeletionNotAllowedException;
 import com.example.stocklite.application.exception.UserAccessDeniedException;
+import com.example.stocklite.application.exception.UserNotFoundException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -20,6 +24,8 @@ public class GlobalExceptionHandler {
 			"Nao foi possivel concluir o cadastro com o email informado.";
 	private static final String MENSAGEM_ERRO_INTERNO =
 			"Ocorreu um erro interno ao processar a solicitacao.";
+	private static final String MENSAGEM_ACESSO_NEGADO =
+			"Usuario sem permissao para executar esta acao.";
 
 	@ExceptionHandler(MethodArgumentNotValidException.class)
 	public ResponseEntity<ErrorResponse> handleValidationException(MethodArgumentNotValidException exception) {
@@ -40,6 +46,25 @@ public class GlobalExceptionHandler {
 	@ExceptionHandler(UserAccessDeniedException.class)
 	public ResponseEntity<ErrorResponse> handleUserAccessDenied(UserAccessDeniedException exception) {
 		return criarResposta(HttpStatus.FORBIDDEN, exception.getMessage());
+	}
+
+	@ExceptionHandler({
+			AuthorizationDeniedException.class,
+			AccessDeniedException.class
+	})
+	public ResponseEntity<ErrorResponse> handleSpringSecurityAccessDenied(Exception exception) {
+		return criarResposta(HttpStatus.FORBIDDEN, MENSAGEM_ACESSO_NEGADO);
+	}
+
+	@ExceptionHandler(SelfUserDeletionNotAllowedException.class)
+	public ResponseEntity<ErrorResponse> handleSelfUserDeletionNotAllowed(
+			SelfUserDeletionNotAllowedException exception) {
+		return criarResposta(HttpStatus.FORBIDDEN, exception.getMessage());
+	}
+
+	@ExceptionHandler(UserNotFoundException.class)
+	public ResponseEntity<ErrorResponse> handleUserNotFound(UserNotFoundException exception) {
+		return criarResposta(HttpStatus.NOT_FOUND, exception.getMessage());
 	}
 
 	@ExceptionHandler(DefaultProfileNotFoundException.class)

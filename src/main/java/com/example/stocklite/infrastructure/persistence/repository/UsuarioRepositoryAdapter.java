@@ -32,6 +32,12 @@ public class UsuarioRepositoryAdapter implements UsuarioRepository {
 	}
 
 	@Override
+	public Optional<Usuario> findById(Integer idUsuario) {
+		return springDataUsuarioRepository.findById(idUsuario)
+				.map(usuarioPersistenceMapper::toDomain);
+	}
+
+	@Override
 	public Usuario save(Usuario usuario) {
 		return usuarioPersistenceMapper.toDomain(
 				springDataUsuarioRepository.save(usuarioPersistenceMapper.toEntity(usuario)));

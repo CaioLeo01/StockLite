@@ -12,4 +12,8 @@ public interface SpringDataUsuarioRepository extends JpaRepository<UsuarioEntity
 
 	@EntityGraph(attributePaths = "perfil")
 	Optional<UsuarioEntity> findByEmailIgnoreCase(String email);
+
+	@Override
+	@EntityGraph(attributePaths = "perfil")
+	Optional<UsuarioEntity> findById(Integer idUsuario);
 }
