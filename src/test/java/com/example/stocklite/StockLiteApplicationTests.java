@@ -5,6 +5,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import com.example.stocklite.application.port.PasswordHasher;
+import com.example.stocklite.application.port.TokenService;
 import com.example.stocklite.domain.repository.PerfilRepository;
 import com.example.stocklite.domain.repository.UsuarioRepository;
 import com.example.stocklite.infrastructure.persistence.repository.SpringDataPerfilRepository;
@@ -30,6 +31,9 @@ class StockLiteApplicationTests {
 
 	@MockitoBean
 	private PasswordHasher passwordHasher;
+
+	@MockitoBean
+	private TokenService tokenService;
 
 	@Test
 	void contextLoads() {
