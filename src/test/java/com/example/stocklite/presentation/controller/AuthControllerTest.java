@@ -9,6 +9,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.ComponentScan.Filter;
+import org.springframework.context.annotation.FilterType;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -19,24 +21,24 @@ import com.example.stocklite.application.dto.LoginResponse;
 import com.example.stocklite.application.exception.EmailAlreadyInUseException;
 import com.example.stocklite.application.exception.InvalidCredentialsException;
 import com.example.stocklite.application.exception.UserAccessDeniedException;
-import com.example.stocklite.application.port.TokenService;
 import com.example.stocklite.application.usecase.LoginService;
 import com.example.stocklite.application.usecase.RegisterUserService;
-import com.example.stocklite.infrastructure.config.SecurityConfig;
 import com.example.stocklite.infrastructure.security.JwtAuthenticationFilter;
 import com.example.stocklite.infrastructure.security.RestAccessDeniedHandler;
 import com.example.stocklite.infrastructure.security.RestAuthenticationEntryPoint;
 import com.example.stocklite.presentation.exception.GlobalExceptionHandler;
 
-@WebMvcTest(AuthController.class)
-@Import({
-		GlobalExceptionHandler.class,
-		SecurityConfig.class,
-		JwtAuthenticationFilter.class,
-		RestAuthenticationEntryPoint.class,
-		RestAccessDeniedHandler.class
-})
+@WebMvcTest(
+		value = AuthController.class,
+		excludeFilters = {
+				@Filter(type = FilterType.ASSIGNABLE_TYPE, classes = JwtAuthenticationFilter.class),
+				@Filter(type = FilterType.ASSIGNABLE_TYPE, classes = RestAuthenticationEntryPoint.class),
+				@Filter(type = FilterType.ASSIGNABLE_TYPE, classes = RestAccessDeniedHandler.class)
+		})
+@Import(GlobalExceptionHandler.class)
 class AuthControllerTest {
+
+	private static final String CONTEXT_PATH = "/v1/api";
 
 	@Autowired
 	private MockMvc mockMvc;
@@ -46,9 +48,6 @@ class AuthControllerTest {
 
 	@MockitoBean
 	private LoginService loginService;
-
-	@MockitoBean
-	private TokenService tokenService;
 
 	@Test
 	void deveRegistrarUsuarioComSucesso() throws Exception {
@@ -61,6 +60,7 @@ class AuthControllerTest {
 		when(registerUserService.registrar(any())).thenReturn(response);
 
 		mockMvc.perform(post("/v1/api/auth/register")
+				.contextPath(CONTEXT_PATH)
 				.contentType(APPLICATION_JSON)
 				.content("""
 						{
@@ -79,6 +79,7 @@ class AuthControllerTest {
 	@Test
 	void deveRetornarBadRequestQuandoPayloadForInvalido() throws Exception {
 		mockMvc.perform(post("/v1/api/auth/register")
+				.contextPath(CONTEXT_PATH)
 				.contentType(APPLICATION_JSON)
 				.content("""
 						{
@@ -96,6 +97,7 @@ class AuthControllerTest {
 		when(registerUserService.registrar(any())).thenThrow(new EmailAlreadyInUseException());
 
 		mockMvc.perform(post("/v1/api/auth/register")
+				.contextPath(CONTEXT_PATH)
 				.contentType(APPLICATION_JSON)
 				.content("""
 						{
@@ -115,6 +117,7 @@ class AuthControllerTest {
 		when(loginService.autenticar(any())).thenReturn(response);
 
 		mockMvc.perform(post("/v1/api/auth/login")
+				.contextPath(CONTEXT_PATH)
 				.contentType(APPLICATION_JSON)
 				.content("""
 						{
@@ -129,6 +132,7 @@ class AuthControllerTest {
 	@Test
 	void deveRetornarBadRequestQuandoPayloadDeLoginForInvalido() throws Exception {
 		mockMvc.perform(post("/v1/api/auth/login")
+				.contextPath(CONTEXT_PATH)
 				.contentType(APPLICATION_JSON)
 				.content("""
 						{
@@ -145,6 +149,7 @@ class AuthControllerTest {
 		when(loginService.autenticar(any())).thenThrow(new InvalidCredentialsException());
 
 		mockMvc.perform(post("/v1/api/auth/login")
+				.contextPath(CONTEXT_PATH)
 				.contentType(APPLICATION_JSON)
 				.content("""
 						{
@@ -161,6 +166,7 @@ class AuthControllerTest {
 		when(loginService.autenticar(any())).thenThrow(new UserAccessDeniedException());
 
 		mockMvc.perform(post("/v1/api/auth/login")
+				.contextPath(CONTEXT_PATH)
 				.contentType(APPLICATION_JSON)
 				.content("""
 						{
