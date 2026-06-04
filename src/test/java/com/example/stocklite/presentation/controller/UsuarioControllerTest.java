@@ -8,33 +8,31 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
-import org.springframework.context.annotation.Import;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import com.example.stocklite.application.port.PasswordHasher;
 import com.example.stocklite.application.exception.SelfUserDeletionNotAllowedException;
 import com.example.stocklite.application.exception.UserNotFoundException;
 import com.example.stocklite.application.port.TokenService;
 import com.example.stocklite.application.security.AuthenticatedUser;
 import com.example.stocklite.application.usecase.InactivateUserResult;
 import com.example.stocklite.application.usecase.InactivateUserService;
-import com.example.stocklite.infrastructure.config.SecurityConfig;
-import com.example.stocklite.infrastructure.security.JwtAuthenticationFilter;
-import com.example.stocklite.infrastructure.security.RestAccessDeniedHandler;
-import com.example.stocklite.infrastructure.security.RestAuthenticationEntryPoint;
-import com.example.stocklite.presentation.exception.GlobalExceptionHandler;
+import com.example.stocklite.domain.repository.PerfilRepository;
+import com.example.stocklite.domain.repository.UsuarioRepository;
+import com.example.stocklite.infrastructure.persistence.repository.SpringDataPerfilRepository;
+import com.example.stocklite.infrastructure.persistence.repository.SpringDataUsuarioRepository;
 
-@WebMvcTest(UsuarioController.class)
-@Import({
-		GlobalExceptionHandler.class,
-		SecurityConfig.class,
-		JwtAuthenticationFilter.class,
-		RestAuthenticationEntryPoint.class,
-		RestAccessDeniedHandler.class
+@SpringBootTest(properties = {
+		"spring.flyway.enabled=false",
+		"spring.autoconfigure.exclude=org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration,org.springframework.boot.orm.jpa.autoconfigure.HibernateJpaAutoConfiguration,org.springframework.boot.flyway.autoconfigure.FlywayAutoConfiguration"
 })
+@AutoConfigureMockMvc
 class UsuarioControllerTest {
 
+	private static final String CONTEXT_PATH = "/v1/api";
 	private static final String TOKEN_VALIDO = "jwt-valido";
 	private static final String TOKEN_INVALIDO = "jwt-invalido";
 
@@ -47,6 +45,21 @@ class UsuarioControllerTest {
 	@MockitoBean
 	private TokenService tokenService;
 
+	@MockitoBean
+	private UsuarioRepository usuarioRepository;
+
+	@MockitoBean
+	private PerfilRepository perfilRepository;
+
+	@MockitoBean
+	private SpringDataUsuarioRepository springDataUsuarioRepository;
+
+	@MockitoBean
+	private SpringDataPerfilRepository springDataPerfilRepository;
+
+	@MockitoBean
+	private PasswordHasher passwordHasher;
+
 	@Test
 	void deveInativarUsuarioQuandoTokenForValidoEUsuarioForAdmin() throws Exception {
 		when(tokenService.parseToken(TOKEN_VALIDO))
@@ -55,6 +68,7 @@ class UsuarioControllerTest {
 				.thenReturn(InactivateUserResult.INATIVADO);
 
 		mockMvc.perform(delete("/v1/api/usuarios/2")
+				.contextPath(CONTEXT_PATH)
 				.header(AUTHORIZATION, "Bearer " + TOKEN_VALIDO))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.mensagem").value("Usuario inativado com sucesso."));
@@ -68,6 +82,7 @@ class UsuarioControllerTest {
 				.thenReturn(InactivateUserResult.JA_ESTAVA_INATIVO);
 
 		mockMvc.perform(delete("/v1/api/usuarios/2")
+				.contextPath(CONTEXT_PATH)
 				.header(AUTHORIZATION, "Bearer " + TOKEN_VALIDO))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.mensagem").value("Usuario ja esta inativo."));
@@ -75,7 +90,8 @@ class UsuarioControllerTest {
 
 	@Test
 	void deveRetornarUnauthorizedQuandoTokenNaoForInformado() throws Exception {
-		mockMvc.perform(delete("/v1/api/usuarios/2"))
+		mockMvc.perform(delete("/v1/api/usuarios/2")
+				.contextPath(CONTEXT_PATH))
 				.andExpect(status().isUnauthorized())
 				.andExpect(jsonPath("$.mensagem").value("Token invalido ou nao informado."));
 	}
@@ -85,6 +101,7 @@ class UsuarioControllerTest {
 		when(tokenService.parseToken(TOKEN_INVALIDO)).thenThrow(new RuntimeException("Token invalido"));
 
 		mockMvc.perform(delete("/v1/api/usuarios/2")
+				.contextPath(CONTEXT_PATH)
 				.header(AUTHORIZATION, "Bearer " + TOKEN_INVALIDO))
 				.andExpect(status().isUnauthorized())
 				.andExpect(jsonPath("$.mensagem").value("Token invalido ou nao informado."));
@@ -96,6 +113,7 @@ class UsuarioControllerTest {
 				.thenReturn(new AuthenticatedUser(10, "viewer@email.com", "VISUALIZADOR"));
 
 		mockMvc.perform(delete("/v1/api/usuarios/2")
+				.contextPath(CONTEXT_PATH)
 				.header(AUTHORIZATION, "Bearer " + TOKEN_VALIDO))
 				.andExpect(status().isForbidden())
 				.andExpect(jsonPath("$.mensagem").value("Usuario sem permissao para executar esta acao."));
@@ -109,6 +127,7 @@ class UsuarioControllerTest {
 				.thenThrow(new SelfUserDeletionNotAllowedException());
 
 		mockMvc.perform(delete("/v1/api/usuarios/1")
+				.contextPath(CONTEXT_PATH)
 				.header(AUTHORIZATION, "Bearer " + TOKEN_VALIDO))
 				.andExpect(status().isForbidden())
 				.andExpect(jsonPath("$.mensagem").value("Usuario sem permissao para executar esta acao."));
@@ -122,6 +141,7 @@ class UsuarioControllerTest {
 				.thenThrow(new UserNotFoundException());
 
 		mockMvc.perform(delete("/v1/api/usuarios/999")
+				.contextPath(CONTEXT_PATH)
 				.header(AUTHORIZATION, "Bearer " + TOKEN_VALIDO))
 				.andExpect(status().isNotFound())
 				.andExpect(jsonPath("$.mensagem").value("Usuario nao encontrado."));
