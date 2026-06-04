@@ -6,7 +6,6 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import com.example.stocklite.application.dto.ErrorResponse;
 import com.example.stocklite.application.exception.DefaultProfileNotFoundException;
@@ -41,30 +40,6 @@ public class GlobalExceptionHandler {
 	@ExceptionHandler(UserAccessDeniedException.class)
 	public ResponseEntity<ErrorResponse> handleUserAccessDenied(UserAccessDeniedException exception) {
 		return criarResposta(HttpStatus.FORBIDDEN, exception.getMessage());
-	}
-
-	@ExceptionHandler({
-			AuthorizationDeniedException.class,
-			AccessDeniedException.class
-	})
-	public ResponseEntity<ErrorResponse> handleSpringSecurityAccessDenied(Exception exception) {
-		return criarResposta(HttpStatus.FORBIDDEN, MENSAGEM_ACESSO_NEGADO);
-	}
-
-	@ExceptionHandler(SelfUserDeletionNotAllowedException.class)
-	public ResponseEntity<ErrorResponse> handleSelfUserDeletionNotAllowed(
-			SelfUserDeletionNotAllowedException exception) {
-		return criarResposta(HttpStatus.FORBIDDEN, exception.getMessage());
-	}
-
-	@ExceptionHandler(UserNotFoundException.class)
-	public ResponseEntity<ErrorResponse> handleUserNotFound(UserNotFoundException exception) {
-		return criarResposta(HttpStatus.NOT_FOUND, exception.getMessage());
-	}
-
-	@ExceptionHandler(NoResourceFoundException.class)
-	public ResponseEntity<ErrorResponse> handleNoResourceFound(NoResourceFoundException exception) {
-		return criarResposta(HttpStatus.NOT_FOUND, "Recurso nao encontrado.");
 	}
 
 	@ExceptionHandler(DefaultProfileNotFoundException.class)
