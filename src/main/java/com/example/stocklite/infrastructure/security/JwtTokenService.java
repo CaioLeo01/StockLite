@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import com.example.stocklite.application.port.TokenService;
+import com.example.stocklite.application.security.AuthenticatedUser;
 import com.example.stocklite.domain.model.Usuario;
 
 import io.jsonwebtoken.Jwts;
@@ -44,4 +45,17 @@ public class JwtTokenService implements TokenService {
 				.compact();
 	}
 
+	@Override
+	public AuthenticatedUser parseToken(String token) {
+		var claims = Jwts.parserBuilder()
+				.setSigningKey(secretKey)
+				.build()
+				.parseClaimsJws(token)
+				.getBody();
+
+		return new AuthenticatedUser(
+				Integer.valueOf(claims.getSubject()),
+				claims.get("email", String.class),
+				claims.get("nivelPermissao", String.class));
+	}
 }

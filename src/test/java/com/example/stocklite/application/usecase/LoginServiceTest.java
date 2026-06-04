@@ -67,7 +67,7 @@ class LoginServiceTest {
 		LoginResponse response = loginService.autenticar(request);
 
 		verify(usuarioRepository).findByEmailIgnoreCase("joao@email.com");
-		assertEquals("Bearer jwt-gerado", response.token());
+		assertEquals("jwt-gerado", response.token());
 	}
 
 	@Test

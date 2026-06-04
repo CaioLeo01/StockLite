@@ -10,5 +10,7 @@ public interface UsuarioRepository {
 
 	Optional<Usuario> findByEmailIgnoreCase(String email);
 
+	Optional<Usuario> findById(Integer idUsuario);
+
 	Usuario save(Usuario usuario);
 }
