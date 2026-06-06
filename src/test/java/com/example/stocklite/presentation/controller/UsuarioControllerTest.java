@@ -3,8 +3,11 @@ package com.example.stocklite.presentation.controller;
 import static org.mockito.Mockito.when;
 import static org.springframework.http.HttpHeaders.AUTHORIZATION;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import java.util.List;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,12 +17,15 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.example.stocklite.application.port.PasswordHasher;
+import com.example.stocklite.application.dto.UsuarioListagemResponse;
+import com.example.stocklite.application.exception.AuthenticatedUserInactiveOrNotFoundException;
 import com.example.stocklite.application.exception.SelfUserDeletionNotAllowedException;
 import com.example.stocklite.application.exception.UserNotFoundException;
 import com.example.stocklite.application.port.TokenService;
 import com.example.stocklite.application.security.AuthenticatedUser;
 import com.example.stocklite.application.usecase.InactivateUserResult;
 import com.example.stocklite.application.usecase.InactivateUserService;
+import com.example.stocklite.application.usecase.ListUsersService;
 import com.example.stocklite.domain.repository.PerfilRepository;
 import com.example.stocklite.domain.repository.UsuarioRepository;
 import com.example.stocklite.infrastructure.persistence.repository.SpringDataPerfilRepository;
@@ -43,6 +49,9 @@ class UsuarioControllerTest {
 	private InactivateUserService inactivateUserService;
 
 	@MockitoBean
+	private ListUsersService listUsersService;
+
+	@MockitoBean
 	private TokenService tokenService;
 
 	@MockitoBean
@@ -59,6 +68,44 @@ class UsuarioControllerTest {
 
 	@MockitoBean
 	private PasswordHasher passwordHasher;
+
+	@Test
+	void deveListarUsuariosQuandoTokenForValidoEUsuarioForAdmin() throws Exception {
+		AuthenticatedUser usuarioAutenticado = new AuthenticatedUser(1, "admin@email.com", "ADMIN");
+
+		when(tokenService.parseToken(TOKEN_VALIDO)).thenReturn(usuarioAutenticado);
+		when(listUsersService.listar(usuarioAutenticado)).thenReturn(List.of(
+				new UsuarioListagemResponse(1, "Joao da Silva", "joao@email.com", 1, "ADMIN", Boolean.TRUE),
+				new UsuarioListagemResponse(2, "Maria Souza", "maria@email.com", 2, "OPERADOR", Boolean.TRUE)));
+
+		mockMvc.perform(get("/v1/api/usuarios")
+				.contextPath(CONTEXT_PATH)
+				.header(AUTHORIZATION, "Bearer " + TOKEN_VALIDO))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$[0].idUsuario").value(1))
+				.andExpect(jsonPath("$[0].nome").value("Joao da Silva"))
+				.andExpect(jsonPath("$[0].email").value("joao@email.com"))
+				.andExpect(jsonPath("$[0].perfilId").value(1))
+				.andExpect(jsonPath("$[0].perfilNome").value("ADMIN"))
+				.andExpect(jsonPath("$[0].status").value(true))
+				.andExpect(jsonPath("$[1].idUsuario").value(2))
+				.andExpect(jsonPath("$[1].perfilNome").value("OPERADOR"));
+	}
+
+	@Test
+	void deveRetornarListaVaziaQuandoNaoHouverUsuarios() throws Exception {
+		AuthenticatedUser usuarioAutenticado = new AuthenticatedUser(1, "admin@email.com", "ADMIN");
+
+		when(tokenService.parseToken(TOKEN_VALIDO)).thenReturn(usuarioAutenticado);
+		when(listUsersService.listar(usuarioAutenticado)).thenReturn(List.of());
+
+		mockMvc.perform(get("/v1/api/usuarios")
+				.contextPath(CONTEXT_PATH)
+				.header(AUTHORIZATION, "Bearer " + TOKEN_VALIDO))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$").isArray())
+				.andExpect(jsonPath("$").isEmpty());
+	}
 
 	@Test
 	void deveInativarUsuarioQuandoTokenForValidoEUsuarioForAdmin() throws Exception {
@@ -90,6 +137,11 @@ class UsuarioControllerTest {
 
 	@Test
 	void deveRetornarUnauthorizedQuandoTokenNaoForInformado() throws Exception {
+		mockMvc.perform(get("/v1/api/usuarios")
+				.contextPath(CONTEXT_PATH))
+				.andExpect(status().isUnauthorized())
+				.andExpect(jsonPath("$.mensagem").value("Token invalido ou nao informado."));
+
 		mockMvc.perform(delete("/v1/api/usuarios/2")
 				.contextPath(CONTEXT_PATH))
 				.andExpect(status().isUnauthorized())
@@ -99,6 +151,12 @@ class UsuarioControllerTest {
 	@Test
 	void deveRetornarUnauthorizedQuandoTokenForInvalido() throws Exception {
 		when(tokenService.parseToken(TOKEN_INVALIDO)).thenThrow(new RuntimeException("Token invalido"));
+
+		mockMvc.perform(get("/v1/api/usuarios")
+				.contextPath(CONTEXT_PATH)
+				.header(AUTHORIZATION, "Bearer " + TOKEN_INVALIDO))
+				.andExpect(status().isUnauthorized())
+				.andExpect(jsonPath("$.mensagem").value("Token invalido ou nao informado."));
 
 		mockMvc.perform(delete("/v1/api/usuarios/2")
 				.contextPath(CONTEXT_PATH)
@@ -112,11 +170,32 @@ class UsuarioControllerTest {
 		when(tokenService.parseToken(TOKEN_VALIDO))
 				.thenReturn(new AuthenticatedUser(10, "viewer@email.com", "VISUALIZADOR"));
 
+		mockMvc.perform(get("/v1/api/usuarios")
+				.contextPath(CONTEXT_PATH)
+				.header(AUTHORIZATION, "Bearer " + TOKEN_VALIDO))
+				.andExpect(status().isForbidden())
+				.andExpect(jsonPath("$.mensagem").value("Usuario sem permissao para executar esta acao."));
+
 		mockMvc.perform(delete("/v1/api/usuarios/2")
 				.contextPath(CONTEXT_PATH)
 				.header(AUTHORIZATION, "Bearer " + TOKEN_VALIDO))
 				.andExpect(status().isForbidden())
 				.andExpect(jsonPath("$.mensagem").value("Usuario sem permissao para executar esta acao."));
+	}
+
+	@Test
+	void deveRetornarForbiddenQuandoUsuarioAutenticadoForInexistenteOuInativoNaListagem() throws Exception {
+		AuthenticatedUser usuarioAutenticado = new AuthenticatedUser(1, "admin@email.com", "ADMIN");
+
+		when(tokenService.parseToken(TOKEN_VALIDO)).thenReturn(usuarioAutenticado);
+		when(listUsersService.listar(usuarioAutenticado))
+				.thenThrow(new AuthenticatedUserInactiveOrNotFoundException());
+
+		mockMvc.perform(get("/v1/api/usuarios")
+				.contextPath(CONTEXT_PATH)
+				.header(AUTHORIZATION, "Bearer " + TOKEN_VALIDO))
+				.andExpect(status().isForbidden())
+				.andExpect(jsonPath("$.mensagem").value("Usuario autenticado inexistente ou inativo."));
 	}
 
 	@Test

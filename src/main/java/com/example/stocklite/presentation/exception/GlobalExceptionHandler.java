@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import com.example.stocklite.application.dto.ErrorResponse;
+import com.example.stocklite.application.exception.AuthenticatedUserInactiveOrNotFoundException;
 import com.example.stocklite.application.exception.DefaultProfileNotFoundException;
 import com.example.stocklite.application.exception.EmailAlreadyInUseException;
 import com.example.stocklite.application.exception.InvalidCredentialsException;
@@ -46,6 +47,12 @@ public class GlobalExceptionHandler {
 
 	@ExceptionHandler(UserAccessDeniedException.class)
 	public ResponseEntity<ErrorResponse> handleUserAccessDenied(UserAccessDeniedException exception) {
+		return criarResposta(HttpStatus.FORBIDDEN, exception.getMessage());
+	}
+
+	@ExceptionHandler(AuthenticatedUserInactiveOrNotFoundException.class)
+	public ResponseEntity<ErrorResponse> handleAuthenticatedUserInactiveOrNotFound(
+			AuthenticatedUserInactiveOrNotFoundException exception) {
 		return criarResposta(HttpStatus.FORBIDDEN, exception.getMessage());
 	}
 
