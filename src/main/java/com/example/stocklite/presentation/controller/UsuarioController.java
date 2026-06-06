@@ -34,7 +34,7 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 @SecurityRequirement(name = "bearerAuth")
 public class UsuarioController {
 
-	private static final String MENSAGEM_USUARIO_INATIVADO = "Usuario inativado com sucesso.";
+	private static final String MENSAGEM_USUARIO_DELETADO = "Usuario deletado com sucesso.";
 	private static final String MENSAGEM_USUARIO_JA_INATIVO = "Usuario ja esta inativo.";
 
 	private final ListUsersService listUsersService;
@@ -81,6 +81,6 @@ public class UsuarioController {
 			return new MessageResponse(MENSAGEM_USUARIO_JA_INATIVO);
 		}
 
-		return new MessageResponse(MENSAGEM_USUARIO_INATIVADO);
+		return new MessageResponse(MENSAGEM_USUARIO_DELETADO);
 	}
 }

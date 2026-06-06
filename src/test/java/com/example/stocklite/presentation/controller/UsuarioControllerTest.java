@@ -128,7 +128,7 @@ class UsuarioControllerTest {
 				.contextPath(CONTEXT_PATH)
 				.header(AUTHORIZATION, "Bearer " + TOKEN_VALIDO))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.mensagem").value("Usuario inativado com sucesso."));
+				.andExpect(jsonPath("$.mensagem").value("Usuario deletado com sucesso."));
 	}
 
 	@Test
