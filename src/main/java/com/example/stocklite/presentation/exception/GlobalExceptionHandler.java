@@ -11,12 +11,16 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import com.example.stocklite.application.dto.ErrorResponse;
+import com.example.stocklite.application.exception.AuthenticatedUserInactiveOrNotFoundException;
 import com.example.stocklite.application.exception.DefaultProfileNotFoundException;
 import com.example.stocklite.application.exception.EmailAlreadyInUseException;
 import com.example.stocklite.application.exception.InvalidCredentialsException;
+import com.example.stocklite.application.exception.ProfileNotFoundException;
+import com.example.stocklite.application.exception.SelfUserUpdateNotAllowedException;
 import com.example.stocklite.application.exception.SelfUserDeletionNotAllowedException;
 import com.example.stocklite.application.exception.UserAccessDeniedException;
 import com.example.stocklite.application.exception.UserNotFoundException;
+import com.example.stocklite.application.exception.UserUpdateConflictException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -39,6 +43,11 @@ public class GlobalExceptionHandler {
 		return criarResposta(HttpStatus.CONFLICT, MENSAGEM_EMAIL_NAO_PROCESSADO);
 	}
 
+	@ExceptionHandler(UserUpdateConflictException.class)
+	public ResponseEntity<ErrorResponse> handleUserUpdateConflict(UserUpdateConflictException exception) {
+		return criarResposta(HttpStatus.CONFLICT, exception.getMessage());
+	}
+
 	@ExceptionHandler(InvalidCredentialsException.class)
 	public ResponseEntity<ErrorResponse> handleInvalidCredentials(InvalidCredentialsException exception) {
 		return criarResposta(HttpStatus.UNAUTHORIZED, exception.getMessage());
@@ -46,6 +55,12 @@ public class GlobalExceptionHandler {
 
 	@ExceptionHandler(UserAccessDeniedException.class)
 	public ResponseEntity<ErrorResponse> handleUserAccessDenied(UserAccessDeniedException exception) {
+		return criarResposta(HttpStatus.FORBIDDEN, exception.getMessage());
+	}
+
+	@ExceptionHandler(AuthenticatedUserInactiveOrNotFoundException.class)
+	public ResponseEntity<ErrorResponse> handleAuthenticatedUserInactiveOrNotFound(
+			AuthenticatedUserInactiveOrNotFoundException exception) {
 		return criarResposta(HttpStatus.FORBIDDEN, exception.getMessage());
 	}
 
@@ -63,8 +78,19 @@ public class GlobalExceptionHandler {
 		return criarResposta(HttpStatus.FORBIDDEN, exception.getMessage());
 	}
 
+	@ExceptionHandler(SelfUserUpdateNotAllowedException.class)
+	public ResponseEntity<ErrorResponse> handleSelfUserUpdateNotAllowed(
+			SelfUserUpdateNotAllowedException exception) {
+		return criarResposta(HttpStatus.FORBIDDEN, exception.getMessage());
+	}
+
 	@ExceptionHandler(UserNotFoundException.class)
 	public ResponseEntity<ErrorResponse> handleUserNotFound(UserNotFoundException exception) {
+		return criarResposta(HttpStatus.NOT_FOUND, exception.getMessage());
+	}
+
+	@ExceptionHandler(ProfileNotFoundException.class)
+	public ResponseEntity<ErrorResponse> handleProfileNotFound(ProfileNotFoundException exception) {
 		return criarResposta(HttpStatus.NOT_FOUND, exception.getMessage());
 	}
 

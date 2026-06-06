@@ -43,7 +43,9 @@ public class SecurityConfig {
 						.accessDeniedHandler(accessDeniedHandler))
 				.authorizeHttpRequests(authorize -> authorize
 						.requestMatchers("/auth/**", "/v1/api/auth/**", "/health", "/v1/api/health").permitAll()
+						.requestMatchers(HttpMethod.GET, "/usuarios/**", "/v1/api/usuarios/**").authenticated()
 						.requestMatchers(HttpMethod.DELETE, "/usuarios/**", "/v1/api/usuarios/**").authenticated()
+						.requestMatchers(HttpMethod.PUT, "/usuarios/**", "/v1/api/usuarios/**").authenticated()
 						.anyRequest().permitAll())
 				.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
 				.cors(Customizer.withDefaults())
