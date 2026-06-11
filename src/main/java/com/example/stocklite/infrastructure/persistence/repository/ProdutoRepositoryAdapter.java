@@ -1,5 +1,6 @@
 package com.example.stocklite.infrastructure.persistence.repository;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.stereotype.Repository;
@@ -25,5 +26,12 @@ public class ProdutoRepositoryAdapter implements ProdutoRepository {
 	public Optional<Produto> findById(Integer idProduto) {
 		return springDataProdutoRepository.findById(idProduto)
 				.map(produtoPersistenceMapper::toDomain);
+	}
+
+	@Override
+	public List<Produto> findAll() {
+		return springDataProdutoRepository.findAll().stream()
+				.map(produtoPersistenceMapper::toDomain)
+				.toList();
 	}
 }
