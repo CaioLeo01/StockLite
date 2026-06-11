@@ -1,5 +1,7 @@
 package com.example.stocklite.presentation.exception;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -8,6 +10,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import com.example.stocklite.application.dto.ErrorResponse;
@@ -15,6 +18,7 @@ import com.example.stocklite.application.exception.AuthenticatedUserInactiveOrNo
 import com.example.stocklite.application.exception.DefaultProfileNotFoundException;
 import com.example.stocklite.application.exception.EmailAlreadyInUseException;
 import com.example.stocklite.application.exception.InvalidCredentialsException;
+import com.example.stocklite.application.exception.ProductNotFoundException;
 import com.example.stocklite.application.exception.ProfileNotFoundException;
 import com.example.stocklite.application.exception.SelfUserUpdateNotAllowedException;
 import com.example.stocklite.application.exception.SelfUserDeletionNotAllowedException;
@@ -25,12 +29,16 @@ import com.example.stocklite.application.exception.UserUpdateConflictException;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+	private static final Logger LOGGER = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
 	private static final String MENSAGEM_EMAIL_NAO_PROCESSADO =
 			"Nao foi possivel concluir o cadastro com o email informado.";
 	private static final String MENSAGEM_ERRO_INTERNO =
 			"Ocorreu um erro interno ao processar a solicitacao.";
 	private static final String MENSAGEM_ACESSO_NEGADO =
 			"Usuario sem permissao para executar esta acao.";
+	private static final String MENSAGEM_IDENTIFICADOR_PRODUTO_INVALIDO =
+			"Identificador do produto invalido.";
 
 	@ExceptionHandler(MethodArgumentNotValidException.class)
 	public ResponseEntity<ErrorResponse> handleValidationException(MethodArgumentNotValidException exception) {
@@ -89,9 +97,20 @@ public class GlobalExceptionHandler {
 		return criarResposta(HttpStatus.NOT_FOUND, exception.getMessage());
 	}
 
+	@ExceptionHandler(ProductNotFoundException.class)
+	public ResponseEntity<ErrorResponse> handleProductNotFound(ProductNotFoundException exception) {
+		return criarResposta(HttpStatus.NOT_FOUND, exception.getMessage());
+	}
+
 	@ExceptionHandler(ProfileNotFoundException.class)
 	public ResponseEntity<ErrorResponse> handleProfileNotFound(ProfileNotFoundException exception) {
 		return criarResposta(HttpStatus.NOT_FOUND, exception.getMessage());
+	}
+
+	@ExceptionHandler(MethodArgumentTypeMismatchException.class)
+	public ResponseEntity<ErrorResponse> handleMethodArgumentTypeMismatch(
+			MethodArgumentTypeMismatchException exception) {
+		return criarResposta(HttpStatus.BAD_REQUEST, MENSAGEM_IDENTIFICADOR_PRODUTO_INVALIDO);
 	}
 
 	@ExceptionHandler(NoResourceFoundException.class)
@@ -106,6 +125,7 @@ public class GlobalExceptionHandler {
 
 	@ExceptionHandler(Exception.class)
 	public ResponseEntity<ErrorResponse> handleUnexpectedException(Exception exception) {
+		LOGGER.error("Erro interno nao tratado durante o processamento da requisicao.", exception);
 		return criarResposta(HttpStatus.INTERNAL_SERVER_ERROR, MENSAGEM_ERRO_INTERNO);
 	}
 

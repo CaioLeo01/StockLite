@@ -36,6 +36,7 @@ import com.example.stocklite.application.usecase.UpdateUserService;
 import com.example.stocklite.domain.repository.PerfilRepository;
 import com.example.stocklite.domain.repository.UsuarioRepository;
 import com.example.stocklite.infrastructure.persistence.repository.SpringDataPerfilRepository;
+import com.example.stocklite.infrastructure.persistence.repository.SpringDataProdutoRepository;
 import com.example.stocklite.infrastructure.persistence.repository.SpringDataUsuarioRepository;
 
 @SpringBootTest(properties = {
@@ -75,6 +76,9 @@ class UsuarioControllerTest {
 
 	@MockitoBean
 	private SpringDataPerfilRepository springDataPerfilRepository;
+
+	@MockitoBean
+	private SpringDataProdutoRepository springDataProdutoRepository;
 
 	@MockitoBean
 	private PasswordHasher passwordHasher;
