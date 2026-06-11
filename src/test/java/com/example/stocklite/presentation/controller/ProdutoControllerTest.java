@@ -2,13 +2,16 @@ package com.example.stocklite.presentation.controller;
 
 import static org.mockito.Mockito.when;
 import static org.springframework.http.HttpHeaders.AUTHORIZATION;
+import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.math.BigDecimal;
 import java.util.List;
 
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -16,14 +19,17 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import com.example.stocklite.application.dto.CadastrarProdutoResponse;
 import com.example.stocklite.application.dto.ProdutoDetalheResponse;
 import com.example.stocklite.application.dto.ProdutoListagemResponse;
 import com.example.stocklite.application.exception.AuthenticatedUserInactiveOrNotFoundException;
+import com.example.stocklite.application.exception.ProductAlreadyExistsException;
 import com.example.stocklite.application.exception.ProductNotFoundException;
 import com.example.stocklite.application.port.PasswordHasher;
 import com.example.stocklite.application.port.TokenService;
 import com.example.stocklite.application.security.AuthenticatedUser;
 import com.example.stocklite.application.usecase.BuscarProdutoPorIdService;
+import com.example.stocklite.application.usecase.CadastrarProdutoService;
 import com.example.stocklite.application.usecase.ListarProdutosService;
 import com.example.stocklite.domain.repository.PerfilRepository;
 import com.example.stocklite.domain.repository.ProdutoRepository;
@@ -48,6 +54,9 @@ class ProdutoControllerTest {
 
 	@MockitoBean
 	private BuscarProdutoPorIdService buscarProdutoPorIdService;
+
+	@MockitoBean
+	private CadastrarProdutoService cadastrarProdutoService;
 
 	@MockitoBean
 	private ListarProdutosService listarProdutosService;
@@ -75,6 +84,76 @@ class ProdutoControllerTest {
 
 	@MockitoBean
 	private PasswordHasher passwordHasher;
+
+	@Test
+	void deveCadastrarProdutoQuandoTokenForValidoEUsuarioForAdmin() throws Exception {
+		AuthenticatedUser usuarioAutenticado = new AuthenticatedUser(1, "admin@email.com", "ADMIN");
+
+		when(tokenService.parseToken(TOKEN_VALIDO)).thenReturn(usuarioAutenticado);
+		when(cadastrarProdutoService.cadastrar(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.eq(usuarioAutenticado)))
+				.thenReturn(new CadastrarProdutoResponse(
+						1,
+						"Teclado mecanico",
+						"Teclado ABNT2",
+						new BigDecimal("250.00"),
+						10,
+						Boolean.TRUE));
+
+		mockMvc.perform(post("/v1/api/produtos")
+				.contextPath(CONTEXT_PATH)
+				.contentType(APPLICATION_JSON)
+				.content("""
+						{
+						  "nome": "Teclado mecanico",
+						  "descricao": "Teclado ABNT2",
+						  "preco": 250.00,
+						  "quantidadeInicial": 10
+						}
+						""")
+				.header(AUTHORIZATION, "Bearer " + TOKEN_VALIDO))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.idProduto").value(1))
+				.andExpect(jsonPath("$.nome").value("Teclado mecanico"))
+				.andExpect(jsonPath("$.descricao").value("Teclado ABNT2"))
+				.andExpect(jsonPath("$.preco").value(250.00))
+				.andExpect(jsonPath("$.quantidadeAtual").value(10))
+				.andExpect(jsonPath("$.status").value(true));
+	}
+
+	@Test
+	void deveCadastrarProdutoQuandoTokenForValidoEUsuarioForEstoquista() throws Exception {
+		AuthenticatedUser usuarioAutenticado = new AuthenticatedUser(2, "estoque@email.com", "ESTOQUISTA");
+
+		when(tokenService.parseToken(TOKEN_VALIDO)).thenReturn(usuarioAutenticado);
+		when(cadastrarProdutoService.cadastrar(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.eq(usuarioAutenticado)))
+				.thenReturn(new CadastrarProdutoResponse(
+						2,
+						"Mouse gamer",
+						null,
+						new BigDecimal("150.00"),
+						5,
+						Boolean.TRUE));
+
+		mockMvc.perform(post("/v1/api/produtos")
+				.contextPath(CONTEXT_PATH)
+				.contentType(APPLICATION_JSON)
+				.content("""
+						{
+						  "nome": "Mouse gamer",
+						  "descricao": null,
+						  "preco": 150.00,
+						  "quantidadeInicial": 5
+						}
+						""")
+				.header(AUTHORIZATION, "Bearer " + TOKEN_VALIDO))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.idProduto").value(2))
+				.andExpect(jsonPath("$.nome").value("Mouse gamer"))
+				.andExpect(jsonPath("$.descricao").value(Matchers.nullValue()))
+				.andExpect(jsonPath("$.preco").value(150.00))
+				.andExpect(jsonPath("$.quantidadeAtual").value(5))
+				.andExpect(jsonPath("$.status").value(true));
+	}
 
 	@Test
 	void deveListarProdutosQuandoTokenForValidoEUsuarioForAdmin() throws Exception {
@@ -211,6 +290,23 @@ class ProdutoControllerTest {
 	}
 
 	@Test
+	void deveRetornarUnauthorizedQuandoTokenNaoForInformadoNoCadastro() throws Exception {
+		mockMvc.perform(post("/v1/api/produtos")
+				.contextPath(CONTEXT_PATH)
+				.contentType(APPLICATION_JSON)
+				.content("""
+						{
+						  "nome": "Teclado mecanico",
+						  "descricao": "Teclado ABNT2",
+						  "preco": 250.00,
+						  "quantidadeInicial": 10
+						}
+						"""))
+				.andExpect(status().isUnauthorized())
+				.andExpect(jsonPath("$.mensagem").value("Token invalido ou nao informado."));
+	}
+
+	@Test
 	void deveRetornarUnauthorizedQuandoTokenForInvalido() throws Exception {
 		when(tokenService.parseToken(TOKEN_INVALIDO)).thenThrow(new RuntimeException("Token invalido"));
 
@@ -227,6 +323,26 @@ class ProdutoControllerTest {
 
 		mockMvc.perform(get("/v1/api/produtos/1")
 				.contextPath(CONTEXT_PATH)
+				.header(AUTHORIZATION, "Bearer " + TOKEN_INVALIDO))
+				.andExpect(status().isUnauthorized())
+				.andExpect(jsonPath("$.mensagem").value("Token invalido ou nao informado."));
+	}
+
+	@Test
+	void deveRetornarUnauthorizedQuandoTokenForInvalidoNoCadastro() throws Exception {
+		when(tokenService.parseToken(TOKEN_INVALIDO)).thenThrow(new RuntimeException("Token invalido"));
+
+		mockMvc.perform(post("/v1/api/produtos")
+				.contextPath(CONTEXT_PATH)
+				.contentType(APPLICATION_JSON)
+				.content("""
+						{
+						  "nome": "Teclado mecanico",
+						  "descricao": "Teclado ABNT2",
+						  "preco": 250.00,
+						  "quantidadeInicial": 10
+						}
+						""")
 				.header(AUTHORIZATION, "Bearer " + TOKEN_INVALIDO))
 				.andExpect(status().isUnauthorized())
 				.andExpect(jsonPath("$.mensagem").value("Token invalido ou nao informado."));
@@ -251,6 +367,27 @@ class ProdutoControllerTest {
 
 		mockMvc.perform(get("/v1/api/produtos/1")
 				.contextPath(CONTEXT_PATH)
+				.header(AUTHORIZATION, "Bearer " + TOKEN_VALIDO))
+				.andExpect(status().isForbidden())
+				.andExpect(jsonPath("$.mensagem").value("Usuario sem permissao para executar esta acao."));
+	}
+
+	@Test
+	void deveRetornarForbiddenQuandoUsuarioNaoTiverPermissaoNoCadastro() throws Exception {
+		when(tokenService.parseToken(TOKEN_VALIDO))
+				.thenReturn(new AuthenticatedUser(10, "operador@email.com", "OPERADOR"));
+
+		mockMvc.perform(post("/v1/api/produtos")
+				.contextPath(CONTEXT_PATH)
+				.contentType(APPLICATION_JSON)
+				.content("""
+						{
+						  "nome": "Teclado mecanico",
+						  "descricao": "Teclado ABNT2",
+						  "preco": 250.00,
+						  "quantidadeInicial": 10
+						}
+						""")
 				.header(AUTHORIZATION, "Bearer " + TOKEN_VALIDO))
 				.andExpect(status().isForbidden())
 				.andExpect(jsonPath("$.mensagem").value("Usuario sem permissao para executar esta acao."));
@@ -284,6 +421,79 @@ class ProdutoControllerTest {
 				.header(AUTHORIZATION, "Bearer " + TOKEN_VALIDO))
 				.andExpect(status().isForbidden())
 				.andExpect(jsonPath("$.mensagem").value("Usuario autenticado inexistente ou inativo."));
+	}
+
+	@Test
+	void deveRetornarForbiddenQuandoUsuarioAutenticadoEstiverInativoOuInexistenteNoCadastro() throws Exception {
+		AuthenticatedUser usuarioAutenticado = new AuthenticatedUser(3, "viewer@email.com", "ESTOQUISTA");
+
+		when(tokenService.parseToken(TOKEN_VALIDO)).thenReturn(usuarioAutenticado);
+		when(cadastrarProdutoService.cadastrar(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.eq(usuarioAutenticado)))
+				.thenThrow(new AuthenticatedUserInactiveOrNotFoundException());
+
+		mockMvc.perform(post("/v1/api/produtos")
+				.contextPath(CONTEXT_PATH)
+				.contentType(APPLICATION_JSON)
+				.content("""
+						{
+						  "nome": "Teclado mecanico",
+						  "descricao": "Teclado ABNT2",
+						  "preco": 250.00,
+						  "quantidadeInicial": 10
+						}
+						""")
+				.header(AUTHORIZATION, "Bearer " + TOKEN_VALIDO))
+				.andExpect(status().isForbidden())
+				.andExpect(jsonPath("$.mensagem").value("Usuario autenticado inexistente ou inativo."));
+	}
+
+	@Test
+	void deveRetornarBadRequestQuandoDadosDoCadastroForemInvalidos() throws Exception {
+		when(tokenService.parseToken(TOKEN_VALIDO))
+				.thenReturn(new AuthenticatedUser(1, "admin@email.com", "ADMIN"));
+
+		mockMvc.perform(post("/v1/api/produtos")
+				.contextPath(CONTEXT_PATH)
+				.contentType(APPLICATION_JSON)
+				.content("""
+						{
+						  "nome": " ",
+						  "descricao": "x".repeat(256),
+						  "preco": 0,
+						  "quantidadeInicial": -1
+						}
+						""".replace("\"x\".repeat(256)", "\"" + "x".repeat(256) + "\""))
+				.header(AUTHORIZATION, "Bearer " + TOKEN_VALIDO))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.mensagem").value(Matchers.allOf(
+						Matchers.containsString("O nome e obrigatorio."),
+						Matchers.containsString("A descricao deve ter no maximo 255 caracteres."),
+						Matchers.containsString("O preco deve ser maior que zero."),
+						Matchers.containsString("A quantidade inicial nao pode ser negativa."))));
+	}
+
+	@Test
+	void deveRetornarConflictQuandoProdutoJaExistirNoCadastro() throws Exception {
+		AuthenticatedUser usuarioAutenticado = new AuthenticatedUser(1, "admin@email.com", "ADMIN");
+
+		when(tokenService.parseToken(TOKEN_VALIDO)).thenReturn(usuarioAutenticado);
+		when(cadastrarProdutoService.cadastrar(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.eq(usuarioAutenticado)))
+				.thenThrow(new ProductAlreadyExistsException());
+
+		mockMvc.perform(post("/v1/api/produtos")
+				.contextPath(CONTEXT_PATH)
+				.contentType(APPLICATION_JSON)
+				.content("""
+						{
+						  "nome": "Teclado mecanico",
+						  "descricao": "Teclado ABNT2",
+						  "preco": 250.00,
+						  "quantidadeInicial": 10
+						}
+						""")
+				.header(AUTHORIZATION, "Bearer " + TOKEN_VALIDO))
+				.andExpect(status().isConflict())
+				.andExpect(jsonPath("$.mensagem").value("Ja existe um produto cadastrado com estes dados."));
 	}
 
 	@Test

@@ -18,6 +18,7 @@ import com.example.stocklite.application.exception.AuthenticatedUserInactiveOrNo
 import com.example.stocklite.application.exception.DefaultProfileNotFoundException;
 import com.example.stocklite.application.exception.EmailAlreadyInUseException;
 import com.example.stocklite.application.exception.InvalidCredentialsException;
+import com.example.stocklite.application.exception.ProductAlreadyExistsException;
 import com.example.stocklite.application.exception.ProductNotFoundException;
 import com.example.stocklite.application.exception.ProfileNotFoundException;
 import com.example.stocklite.application.exception.SelfUserUpdateNotAllowedException;
@@ -53,6 +54,11 @@ public class GlobalExceptionHandler {
 
 	@ExceptionHandler(UserUpdateConflictException.class)
 	public ResponseEntity<ErrorResponse> handleUserUpdateConflict(UserUpdateConflictException exception) {
+		return criarResposta(HttpStatus.CONFLICT, exception.getMessage());
+	}
+
+	@ExceptionHandler(ProductAlreadyExistsException.class)
+	public ResponseEntity<ErrorResponse> handleProductAlreadyExists(ProductAlreadyExistsException exception) {
 		return criarResposta(HttpStatus.CONFLICT, exception.getMessage());
 	}
 

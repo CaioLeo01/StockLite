@@ -23,6 +23,11 @@ public class ProdutoRepositoryAdapter implements ProdutoRepository {
 	}
 
 	@Override
+	public boolean existsByNomeIgnoreCase(String nome) {
+		return springDataProdutoRepository.existsByNomeIgnoreCase(nome);
+	}
+
+	@Override
 	public Optional<Produto> findById(Integer idProduto) {
 		return springDataProdutoRepository.findById(idProduto)
 				.map(produtoPersistenceMapper::toDomain);
@@ -33,5 +38,11 @@ public class ProdutoRepositoryAdapter implements ProdutoRepository {
 		return springDataProdutoRepository.findAll().stream()
 				.map(produtoPersistenceMapper::toDomain)
 				.toList();
+	}
+
+	@Override
+	public Produto save(Produto produto) {
+		return produtoPersistenceMapper.toDomain(
+				springDataProdutoRepository.save(produtoPersistenceMapper.toEntity(produto)));
 	}
 }
