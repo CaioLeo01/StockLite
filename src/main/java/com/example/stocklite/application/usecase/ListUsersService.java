@@ -5,7 +5,6 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 
 import com.example.stocklite.application.dto.UsuarioListagemResponse;
-import com.example.stocklite.application.exception.AuthenticatedUserInactiveOrNotFoundException;
 import com.example.stocklite.application.security.AuthenticatedUser;
 import com.example.stocklite.domain.model.Perfil;
 import com.example.stocklite.domain.model.Usuario;
@@ -15,26 +14,21 @@ import com.example.stocklite.domain.repository.UsuarioRepository;
 public class ListUsersService {
 
 	private final UsuarioRepository usuarioRepository;
+	private final AuthenticatedUserValidator authenticatedUserValidator;
 
-	public ListUsersService(UsuarioRepository usuarioRepository) {
+	public ListUsersService(
+			UsuarioRepository usuarioRepository,
+			AuthenticatedUserValidator authenticatedUserValidator) {
 		this.usuarioRepository = usuarioRepository;
+		this.authenticatedUserValidator = authenticatedUserValidator;
 	}
 
 	public List<UsuarioListagemResponse> listar(AuthenticatedUser usuarioAutenticado) {
-		validarUsuarioAutenticado(usuarioAutenticado);
+		authenticatedUserValidator.validarUsuarioAtivo(usuarioAutenticado, null);
 
 		return usuarioRepository.findAll().stream()
 				.map(this::toResponse)
 				.toList();
-	}
-
-	private void validarUsuarioAutenticado(AuthenticatedUser usuarioAutenticado) {
-		Usuario usuario = usuarioRepository.findById(usuarioAutenticado.idUsuario())
-				.orElseThrow(AuthenticatedUserInactiveOrNotFoundException::new);
-
-		if (usuario.estaInativo()) {
-			throw new AuthenticatedUserInactiveOrNotFoundException();
-		}
 	}
 
 	private UsuarioListagemResponse toResponse(Usuario usuario) {

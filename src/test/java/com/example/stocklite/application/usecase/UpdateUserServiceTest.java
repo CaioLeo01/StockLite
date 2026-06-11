@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -39,6 +40,9 @@ class UpdateUserServiceTest {
 
 	@Mock
 	private PerfilRepository perfilRepository;
+
+	@Mock
+	private AuthenticatedUserValidator authenticatedUserValidator;
 
 	@InjectMocks
 	private UpdateUserService updateUserService;
@@ -93,7 +97,6 @@ class UpdateUserServiceTest {
 				2,
 				Boolean.FALSE);
 
-		when(usuarioRepository.findById(1)).thenReturn(Optional.of(usuarioAdminAtivo));
 		when(usuarioRepository.findById(2)).thenReturn(Optional.of(usuarioAlvo));
 		when(perfilRepository.findById(2)).thenReturn(Optional.of(perfilOperador));
 		when(usuarioRepository.findByEmailIgnoreCase("maria.silva@email.com")).thenReturn(Optional.empty());
@@ -127,7 +130,6 @@ class UpdateUserServiceTest {
 				2,
 				Boolean.TRUE);
 
-		when(usuarioRepository.findById(1)).thenReturn(Optional.of(usuarioAdminAtivo));
 		when(usuarioRepository.findById(2)).thenReturn(Optional.of(usuarioAlvo));
 		when(perfilRepository.findById(2)).thenReturn(Optional.of(perfilOperador));
 		when(usuarioRepository.findByEmailIgnoreCase("maria@email.com")).thenReturn(Optional.of(usuarioAlvo));
@@ -151,7 +153,6 @@ class UpdateUserServiceTest {
 		usuarioComMesmoEmail.setIdUsuario(99);
 		usuarioComMesmoEmail.setEmail("joao@email.com");
 
-		when(usuarioRepository.findById(1)).thenReturn(Optional.of(usuarioAdminAtivo));
 		when(usuarioRepository.findById(2)).thenReturn(Optional.of(usuarioAlvo));
 		when(perfilRepository.findById(2)).thenReturn(Optional.of(perfilOperador));
 		when(usuarioRepository.findByEmailIgnoreCase("joao@email.com")).thenReturn(Optional.of(usuarioComMesmoEmail));
@@ -166,7 +167,9 @@ class UpdateUserServiceTest {
 		AuthenticatedUser usuarioAutenticado = new AuthenticatedUser(1, "admin@email.com", "ADMIN");
 		AtualizarUsuarioRequest request = new AtualizarUsuarioRequest("Maria", "maria@email.com", 2, Boolean.TRUE);
 
-		when(usuarioRepository.findById(1)).thenReturn(Optional.empty());
+		doThrow(new AuthenticatedUserInactiveOrNotFoundException())
+				.when(authenticatedUserValidator)
+				.validarUsuarioAtivo(usuarioAutenticado, null);
 
 		assertThrows(AuthenticatedUserInactiveOrNotFoundException.class,
 				() -> updateUserService.atualizar(2, request, usuarioAutenticado));
@@ -178,7 +181,9 @@ class UpdateUserServiceTest {
 		AuthenticatedUser usuarioAutenticado = new AuthenticatedUser(1, "admin@email.com", "ADMIN");
 		AtualizarUsuarioRequest request = new AtualizarUsuarioRequest("Maria", "maria@email.com", 2, Boolean.TRUE);
 
-		when(usuarioRepository.findById(1)).thenReturn(Optional.of(usuarioAdminInativo));
+		doThrow(new AuthenticatedUserInactiveOrNotFoundException())
+				.when(authenticatedUserValidator)
+				.validarUsuarioAtivo(usuarioAutenticado, null);
 
 		assertThrows(AuthenticatedUserInactiveOrNotFoundException.class,
 				() -> updateUserService.atualizar(2, request, usuarioAutenticado));
@@ -190,8 +195,6 @@ class UpdateUserServiceTest {
 		AuthenticatedUser usuarioAutenticado = new AuthenticatedUser(2, "admin@email.com", "ADMIN");
 		AtualizarUsuarioRequest request = new AtualizarUsuarioRequest("Maria", "maria@email.com", 2, Boolean.TRUE);
 
-		when(usuarioRepository.findById(2)).thenReturn(Optional.of(usuarioAlvo));
-
 		assertThrows(SelfUserUpdateNotAllowedException.class,
 				() -> updateUserService.atualizar(2, request, usuarioAutenticado));
 	}
@@ -201,7 +204,6 @@ class UpdateUserServiceTest {
 		AuthenticatedUser usuarioAutenticado = new AuthenticatedUser(1, "admin@email.com", "ADMIN");
 		AtualizarUsuarioRequest request = new AtualizarUsuarioRequest("Maria", "maria@email.com", 2, Boolean.TRUE);
 
-		when(usuarioRepository.findById(1)).thenReturn(Optional.of(usuarioAdminAtivo));
 		when(usuarioRepository.findById(999)).thenReturn(Optional.empty());
 
 		assertThrows(UserNotFoundException.class,
@@ -213,7 +215,6 @@ class UpdateUserServiceTest {
 		AuthenticatedUser usuarioAutenticado = new AuthenticatedUser(1, "admin@email.com", "ADMIN");
 		AtualizarUsuarioRequest request = new AtualizarUsuarioRequest("Maria", "maria@email.com", 99, Boolean.TRUE);
 
-		when(usuarioRepository.findById(1)).thenReturn(Optional.of(usuarioAdminAtivo));
 		when(usuarioRepository.findById(2)).thenReturn(Optional.of(usuarioAlvo));
 		when(perfilRepository.findById(99)).thenReturn(Optional.empty());
 

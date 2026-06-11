@@ -2,11 +2,11 @@ package com.example.stocklite.application.usecase;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 
 import java.math.BigDecimal;
 import java.util.Optional;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -20,9 +20,7 @@ import com.example.stocklite.application.exception.ProductNotFoundException;
 import com.example.stocklite.application.security.AuthenticatedUser;
 import com.example.stocklite.domain.model.Perfil;
 import com.example.stocklite.domain.model.Produto;
-import com.example.stocklite.domain.model.Usuario;
 import com.example.stocklite.domain.repository.ProdutoRepository;
-import com.example.stocklite.domain.repository.UsuarioRepository;
 
 @ExtendWith(MockitoExtension.class)
 class BuscarProdutoPorIdServiceTest {
@@ -31,13 +29,11 @@ class BuscarProdutoPorIdServiceTest {
 	private ProdutoRepository produtoRepository;
 
 	@Mock
-	private UsuarioRepository usuarioRepository;
+	private AuthenticatedUserValidator authenticatedUserValidator;
 
 	@InjectMocks
 	private BuscarProdutoPorIdService buscarProdutoPorIdService;
 
-	private Usuario usuarioAdminAtivo;
-	private Usuario usuarioInativo;
 	private Produto produto;
 
 	@BeforeEach
@@ -45,20 +41,6 @@ class BuscarProdutoPorIdServiceTest {
 		Perfil perfilAdmin = new Perfil();
 		perfilAdmin.setIdPerfil(1);
 		perfilAdmin.setNome("ADMIN");
-
-		usuarioAdminAtivo = new Usuario();
-		usuarioAdminAtivo.setIdUsuario(1);
-		usuarioAdminAtivo.setNome("Administrador");
-		usuarioAdminAtivo.setEmail("admin@email.com");
-		usuarioAdminAtivo.setAtivo(Boolean.TRUE);
-		usuarioAdminAtivo.setPerfil(perfilAdmin);
-
-		usuarioInativo = new Usuario();
-		usuarioInativo.setIdUsuario(2);
-		usuarioInativo.setNome("Usuario Inativo");
-		usuarioInativo.setEmail("inativo@email.com");
-		usuarioInativo.setAtivo(Boolean.FALSE);
-		usuarioInativo.setPerfil(perfilAdmin);
 
 		produto = Produto.builder()
 				.idProduto(10)
@@ -74,7 +56,6 @@ class BuscarProdutoPorIdServiceTest {
 	void deveRetornarProdutoQuandoUsuarioAutenticadoForValidoEProdutoExistir() {
 		AuthenticatedUser usuarioAutenticado = new AuthenticatedUser(1, "admin@email.com", "ADMIN");
 
-		when(usuarioRepository.findById(1)).thenReturn(Optional.of(usuarioAdminAtivo));
 		when(produtoRepository.findById(10)).thenReturn(Optional.of(produto));
 
 		ProdutoDetalheResponse response = buscarProdutoPorIdService.buscar(10, usuarioAutenticado);
@@ -92,7 +73,9 @@ class BuscarProdutoPorIdServiceTest {
 	void deveRetornarForbiddenQuandoUsuarioAutenticadoNaoExistir() {
 		AuthenticatedUser usuarioAutenticado = new AuthenticatedUser(999, "admin@email.com", "ADMIN");
 
-		when(usuarioRepository.findById(999)).thenReturn(Optional.empty());
+		doThrow(new AuthenticatedUserInactiveOrNotFoundException())
+				.when(authenticatedUserValidator)
+				.validarUsuarioAtivo(usuarioAutenticado, "tentando consultar produto");
 
 		assertThrows(AuthenticatedUserInactiveOrNotFoundException.class,
 				() -> buscarProdutoPorIdService.buscar(10, usuarioAutenticado));
@@ -102,7 +85,9 @@ class BuscarProdutoPorIdServiceTest {
 	void deveRetornarForbiddenQuandoUsuarioAutenticadoEstiverInativo() {
 		AuthenticatedUser usuarioAutenticado = new AuthenticatedUser(2, "inativo@email.com", "ADMIN");
 
-		when(usuarioRepository.findById(2)).thenReturn(Optional.of(usuarioInativo));
+		doThrow(new AuthenticatedUserInactiveOrNotFoundException())
+				.when(authenticatedUserValidator)
+				.validarUsuarioAtivo(usuarioAutenticado, "tentando consultar produto");
 
 		assertThrows(AuthenticatedUserInactiveOrNotFoundException.class,
 				() -> buscarProdutoPorIdService.buscar(10, usuarioAutenticado));
@@ -112,7 +97,6 @@ class BuscarProdutoPorIdServiceTest {
 	void deveRetornarNotFoundQuandoProdutoNaoExistir() {
 		AuthenticatedUser usuarioAutenticado = new AuthenticatedUser(1, "admin@email.com", "ADMIN");
 
-		when(usuarioRepository.findById(1)).thenReturn(Optional.of(usuarioAdminAtivo));
 		when(produtoRepository.findById(10)).thenReturn(Optional.empty());
 
 		assertThrows(ProductNotFoundException.class,

@@ -2,11 +2,11 @@ package com.example.stocklite.application.usecase;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -20,9 +20,7 @@ import com.example.stocklite.application.exception.AuthenticatedUserInactiveOrNo
 import com.example.stocklite.application.security.AuthenticatedUser;
 import com.example.stocklite.domain.model.Perfil;
 import com.example.stocklite.domain.model.Produto;
-import com.example.stocklite.domain.model.Usuario;
 import com.example.stocklite.domain.repository.ProdutoRepository;
-import com.example.stocklite.domain.repository.UsuarioRepository;
 
 @ExtendWith(MockitoExtension.class)
 class ListarProdutosServiceTest {
@@ -31,13 +29,11 @@ class ListarProdutosServiceTest {
 	private ProdutoRepository produtoRepository;
 
 	@Mock
-	private UsuarioRepository usuarioRepository;
+	private AuthenticatedUserValidator authenticatedUserValidator;
 
 	@InjectMocks
 	private ListarProdutosService listarProdutosService;
 
-	private Usuario usuarioAdminAtivo;
-	private Usuario usuarioInativo;
 	private Produto produtoMouse;
 	private Produto produtoTeclado;
 
@@ -46,20 +42,6 @@ class ListarProdutosServiceTest {
 		Perfil perfilAdmin = new Perfil();
 		perfilAdmin.setIdPerfil(1);
 		perfilAdmin.setNome("ADMIN");
-
-		usuarioAdminAtivo = new Usuario();
-		usuarioAdminAtivo.setIdUsuario(1);
-		usuarioAdminAtivo.setNome("Administrador");
-		usuarioAdminAtivo.setEmail("admin@email.com");
-		usuarioAdminAtivo.setAtivo(Boolean.TRUE);
-		usuarioAdminAtivo.setPerfil(perfilAdmin);
-
-		usuarioInativo = new Usuario();
-		usuarioInativo.setIdUsuario(2);
-		usuarioInativo.setNome("Usuario Inativo");
-		usuarioInativo.setEmail("inativo@email.com");
-		usuarioInativo.setAtivo(Boolean.FALSE);
-		usuarioInativo.setPerfil(perfilAdmin);
 
 		produtoMouse = Produto.builder()
 				.idProduto(10)
@@ -84,7 +66,6 @@ class ListarProdutosServiceTest {
 	void deveRetornarListaResumidaQuandoUsuarioAutenticadoForValido() {
 		AuthenticatedUser usuarioAutenticado = new AuthenticatedUser(1, "admin@email.com", "ADMIN");
 
-		when(usuarioRepository.findById(1)).thenReturn(Optional.of(usuarioAdminAtivo));
 		when(produtoRepository.findAll()).thenReturn(List.of(produtoMouse, produtoTeclado));
 
 		List<ProdutoListagemResponse> response = listarProdutosService.listar(usuarioAutenticado);
@@ -98,7 +79,6 @@ class ListarProdutosServiceTest {
 	void deveRetornarListaVaziaQuandoNaoHouverProdutos() {
 		AuthenticatedUser usuarioAutenticado = new AuthenticatedUser(1, "admin@email.com", "ADMIN");
 
-		when(usuarioRepository.findById(1)).thenReturn(Optional.of(usuarioAdminAtivo));
 		when(produtoRepository.findAll()).thenReturn(List.of());
 
 		List<ProdutoListagemResponse> response = listarProdutosService.listar(usuarioAutenticado);
@@ -110,7 +90,9 @@ class ListarProdutosServiceTest {
 	void deveRetornarForbiddenQuandoUsuarioAutenticadoNaoExistir() {
 		AuthenticatedUser usuarioAutenticado = new AuthenticatedUser(999, "admin@email.com", "ADMIN");
 
-		when(usuarioRepository.findById(999)).thenReturn(Optional.empty());
+		doThrow(new AuthenticatedUserInactiveOrNotFoundException())
+				.when(authenticatedUserValidator)
+				.validarUsuarioAtivo(usuarioAutenticado, "ao listar produtos");
 
 		assertThrows(AuthenticatedUserInactiveOrNotFoundException.class,
 				() -> listarProdutosService.listar(usuarioAutenticado));
@@ -120,7 +102,9 @@ class ListarProdutosServiceTest {
 	void deveRetornarForbiddenQuandoUsuarioAutenticadoEstiverInativo() {
 		AuthenticatedUser usuarioAutenticado = new AuthenticatedUser(2, "inativo@email.com", "ADMIN");
 
-		when(usuarioRepository.findById(2)).thenReturn(Optional.of(usuarioInativo));
+		doThrow(new AuthenticatedUserInactiveOrNotFoundException())
+				.when(authenticatedUserValidator)
+				.validarUsuarioAtivo(usuarioAutenticado, "ao listar produtos");
 
 		assertThrows(AuthenticatedUserInactiveOrNotFoundException.class,
 				() -> listarProdutosService.listar(usuarioAutenticado));

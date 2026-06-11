@@ -5,13 +5,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import com.example.stocklite.application.dto.ProdutoDetalheResponse;
-import com.example.stocklite.application.exception.AuthenticatedUserInactiveOrNotFoundException;
 import com.example.stocklite.application.exception.ProductNotFoundException;
 import com.example.stocklite.application.security.AuthenticatedUser;
 import com.example.stocklite.domain.model.Produto;
-import com.example.stocklite.domain.model.Usuario;
 import com.example.stocklite.domain.repository.ProdutoRepository;
-import com.example.stocklite.domain.repository.UsuarioRepository;
 
 @Service
 public class BuscarProdutoPorIdService {
@@ -19,17 +16,17 @@ public class BuscarProdutoPorIdService {
 	private static final Logger LOGGER = LoggerFactory.getLogger(BuscarProdutoPorIdService.class);
 
 	private final ProdutoRepository produtoRepository;
-	private final UsuarioRepository usuarioRepository;
+	private final AuthenticatedUserValidator authenticatedUserValidator;
 
 	public BuscarProdutoPorIdService(
 			ProdutoRepository produtoRepository,
-			UsuarioRepository usuarioRepository) {
+			AuthenticatedUserValidator authenticatedUserValidator) {
 		this.produtoRepository = produtoRepository;
-		this.usuarioRepository = usuarioRepository;
+		this.authenticatedUserValidator = authenticatedUserValidator;
 	}
 
 	public ProdutoDetalheResponse buscar(Integer idProduto, AuthenticatedUser usuarioAutenticado) {
-		validarUsuarioAutenticado(usuarioAutenticado);
+		authenticatedUserValidator.validarUsuarioAtivo(usuarioAutenticado, "tentando consultar produto");
 
 		Produto produto = produtoRepository.findById(idProduto)
 				.orElseThrow(() -> {
@@ -38,19 +35,6 @@ public class BuscarProdutoPorIdService {
 				});
 
 		return toResponse(produto);
-	}
-
-	private void validarUsuarioAutenticado(AuthenticatedUser usuarioAutenticado) {
-		Usuario usuario = usuarioRepository.findById(usuarioAutenticado.idUsuario())
-				.orElseThrow(() -> {
-					LOGGER.warn("Usuario autenticado nao encontrado. idUsuario={}", usuarioAutenticado.idUsuario());
-					return new AuthenticatedUserInactiveOrNotFoundException();
-				});
-
-		if (usuario.estaInativo()) {
-			LOGGER.warn("Usuario autenticado inativo tentando consultar produto. idUsuario={}", usuario.getIdUsuario());
-			throw new AuthenticatedUserInactiveOrNotFoundException();
-		}
 	}
 
 	private ProdutoDetalheResponse toResponse(Produto produto) {
