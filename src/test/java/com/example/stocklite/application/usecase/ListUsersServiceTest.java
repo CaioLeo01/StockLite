@@ -2,12 +2,11 @@ package com.example.stocklite.application.usecase;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
-import java.util.Optional;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -28,30 +27,25 @@ class ListUsersServiceTest {
 	@Mock
 	private UsuarioRepository usuarioRepository;
 
+	@Mock
+	private AuthenticatedUserValidator authenticatedUserValidator;
+
 	@InjectMocks
 	private ListUsersService listUsersService;
 
-	private Usuario usuarioAdminAtivo;
+	private Perfil perfilAdmin;
 	private Usuario usuarioOperadorAtivo;
 	private Usuario usuarioOperadorInativo;
 
 	@BeforeEach
 	void setUp() {
-		Perfil perfilAdmin = new Perfil();
+		perfilAdmin = new Perfil();
 		perfilAdmin.setIdPerfil(1);
 		perfilAdmin.setNome("ADMIN");
 
 		Perfil perfilOperador = new Perfil();
 		perfilOperador.setIdPerfil(2);
 		perfilOperador.setNome("OPERADOR");
-
-		usuarioAdminAtivo = new Usuario();
-		usuarioAdminAtivo.setIdUsuario(1);
-		usuarioAdminAtivo.setNome("Administrador");
-		usuarioAdminAtivo.setEmail("admin@email.com");
-		usuarioAdminAtivo.setSenha("hash-admin");
-		usuarioAdminAtivo.setAtivo(Boolean.TRUE);
-		usuarioAdminAtivo.setPerfil(perfilAdmin);
 
 		usuarioOperadorAtivo = new Usuario();
 		usuarioOperadorAtivo.setIdUsuario(2);
@@ -71,19 +65,26 @@ class ListUsersServiceTest {
 	}
 
 	@Test
-	void deveListarUsuariosAtivosEInativosQuandoAutenticadoForValidoEAtivo() {
+	void deveListarApenasUsuariosAtivosQuandoAutenticadoForValidoEAtivo() {
 		AuthenticatedUser usuarioAutenticado = new AuthenticatedUser(1, "admin@email.com", "ADMIN");
 
-		when(usuarioRepository.findById(1)).thenReturn(Optional.of(usuarioAdminAtivo));
+		Usuario usuarioAdminAtivo = new Usuario();
+		usuarioAdminAtivo.setIdUsuario(1);
+		usuarioAdminAtivo.setNome("Administrador");
+		usuarioAdminAtivo.setEmail("admin@email.com");
+		usuarioAdminAtivo.setSenha("hash-admin");
+		usuarioAdminAtivo.setAtivo(Boolean.TRUE);
+		usuarioAdminAtivo.setPerfil(perfilAdmin);
+
 		when(usuarioRepository.findAll()).thenReturn(List.of(usuarioAdminAtivo, usuarioOperadorAtivo, usuarioOperadorInativo));
 
 		List<UsuarioListagemResponse> response = listUsersService.listar(usuarioAutenticado);
 
-		assertEquals(3, response.size());
+		assertEquals(2, response.size());
 		assertEquals(new UsuarioListagemResponse(1, "Administrador", "admin@email.com", 1, "ADMIN", Boolean.TRUE),
 				response.getFirst());
-		assertEquals(new UsuarioListagemResponse(3, "Carlos Lima", "carlos@email.com", 2, "OPERADOR", Boolean.FALSE),
-				response.get(2));
+		assertEquals(new UsuarioListagemResponse(2, "Maria Souza", "maria@email.com", 2, "OPERADOR", Boolean.TRUE),
+				response.get(1));
 		verify(usuarioRepository).findAll();
 	}
 
@@ -91,7 +92,6 @@ class ListUsersServiceTest {
 	void deveRetornarListaVaziaQuandoNaoHouverUsuariosCadastrados() {
 		AuthenticatedUser usuarioAutenticado = new AuthenticatedUser(1, "admin@email.com", "ADMIN");
 
-		when(usuarioRepository.findById(1)).thenReturn(Optional.of(usuarioAdminAtivo));
 		when(usuarioRepository.findAll()).thenReturn(List.of());
 
 		List<UsuarioListagemResponse> response = listUsersService.listar(usuarioAutenticado);
@@ -103,7 +103,9 @@ class ListUsersServiceTest {
 	void deveRetornarForbiddenQuandoUsuarioAutenticadoNaoExistir() {
 		AuthenticatedUser usuarioAutenticado = new AuthenticatedUser(999, "admin@email.com", "ADMIN");
 
-		when(usuarioRepository.findById(999)).thenReturn(Optional.empty());
+		doThrow(new AuthenticatedUserInactiveOrNotFoundException())
+				.when(authenticatedUserValidator)
+				.validarUsuarioAtivo(usuarioAutenticado, null);
 
 		assertThrows(AuthenticatedUserInactiveOrNotFoundException.class,
 				() -> listUsersService.listar(usuarioAutenticado));
@@ -113,7 +115,9 @@ class ListUsersServiceTest {
 	void deveRetornarForbiddenQuandoUsuarioAutenticadoEstiverInativo() {
 		AuthenticatedUser usuarioAutenticado = new AuthenticatedUser(3, "carlos@email.com", "ADMIN");
 
-		when(usuarioRepository.findById(3)).thenReturn(Optional.of(usuarioOperadorInativo));
+		doThrow(new AuthenticatedUserInactiveOrNotFoundException())
+				.when(authenticatedUserValidator)
+				.validarUsuarioAtivo(usuarioAutenticado, null);
 
 		assertThrows(AuthenticatedUserInactiveOrNotFoundException.class,
 				() -> listUsersService.listar(usuarioAutenticado));

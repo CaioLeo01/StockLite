@@ -17,7 +17,6 @@ import org.springframework.web.bind.annotation.RestController;
 import com.example.stocklite.application.dto.AtualizarUsuarioRequest;
 import com.example.stocklite.application.dto.MessageResponse;
 import com.example.stocklite.application.dto.UsuarioListagemResponse;
-import com.example.stocklite.application.dto.UsuarioResponse;
 import com.example.stocklite.application.security.AuthenticatedUser;
 import com.example.stocklite.application.usecase.InactivateUserResult;
 import com.example.stocklite.application.usecase.InactivateUserService;
@@ -69,7 +68,7 @@ public class UsuarioController {
 
 	@PutMapping("/{id}")
 	@PreAuthorize("hasRole('ADMIN')")
-	public ResponseEntity<UsuarioResponse> atualizarUsuario(
+	public ResponseEntity<MessageResponse> atualizarUsuario(
 			@PathVariable("id") Integer idUsuario,
 			@Valid @RequestBody AtualizarUsuarioRequest request,
 			@AuthenticationPrincipal AuthenticatedUser usuarioAutenticado) {

@@ -2,7 +2,6 @@ package com.example.stocklite.application.usecase;
 
 import org.springframework.stereotype.Service;
 
-import com.example.stocklite.application.exception.AuthenticatedUserInactiveOrNotFoundException;
 import com.example.stocklite.application.exception.SelfUserDeletionNotAllowedException;
 import com.example.stocklite.application.exception.UserNotFoundException;
 import com.example.stocklite.application.security.AuthenticatedUser;
@@ -13,13 +12,17 @@ import com.example.stocklite.domain.repository.UsuarioRepository;
 public class InactivateUserService {
 
 	private final UsuarioRepository usuarioRepository;
+	private final AuthenticatedUserValidator authenticatedUserValidator;
 
-	public InactivateUserService(UsuarioRepository usuarioRepository) {
+	public InactivateUserService(
+			UsuarioRepository usuarioRepository,
+			AuthenticatedUserValidator authenticatedUserValidator) {
 		this.usuarioRepository = usuarioRepository;
+		this.authenticatedUserValidator = authenticatedUserValidator;
 	}
 
 	public InactivateUserResult inativar(Integer idUsuarioAlvo, AuthenticatedUser usuarioAutenticado) {
-		validarUsuarioAutenticado(usuarioAutenticado);
+		authenticatedUserValidator.validarUsuarioAtivo(usuarioAutenticado, null);
 		validarAutoInativacao(idUsuarioAlvo, usuarioAutenticado);
 
 		Usuario usuario = usuarioRepository.findById(idUsuarioAlvo)
@@ -38,15 +41,6 @@ public class InactivateUserService {
 	private void validarAutoInativacao(Integer idUsuarioAlvo, AuthenticatedUser usuarioAutenticado) {
 		if (idUsuarioAlvo.equals(usuarioAutenticado.idUsuario())) {
 			throw new SelfUserDeletionNotAllowedException();
-		}
-	}
-
-	private void validarUsuarioAutenticado(AuthenticatedUser usuarioAutenticado) {
-		Usuario usuario = usuarioRepository.findById(usuarioAutenticado.idUsuario())
-				.orElseThrow(AuthenticatedUserInactiveOrNotFoundException::new);
-
-		if (usuario.estaInativo()) {
-			throw new AuthenticatedUserInactiveOrNotFoundException();
 		}
 	}
 }

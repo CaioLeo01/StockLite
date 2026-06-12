@@ -9,6 +9,7 @@ import com.example.stocklite.application.port.TokenService;
 import com.example.stocklite.domain.repository.PerfilRepository;
 import com.example.stocklite.domain.repository.UsuarioRepository;
 import com.example.stocklite.infrastructure.persistence.repository.SpringDataPerfilRepository;
+import com.example.stocklite.infrastructure.persistence.repository.SpringDataProdutoRepository;
 import com.example.stocklite.infrastructure.persistence.repository.SpringDataUsuarioRepository;
 
 @SpringBootTest(properties = {
@@ -28,6 +29,9 @@ class StockLiteApplicationTests {
 
 	@MockitoBean
 	private SpringDataPerfilRepository springDataPerfilRepository;
+
+	@MockitoBean
+	private SpringDataProdutoRepository springDataProdutoRepository;
 
 	@MockitoBean
 	private PasswordHasher passwordHasher;

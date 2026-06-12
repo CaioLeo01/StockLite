@@ -2,6 +2,7 @@ package com.example.stocklite.application.usecase;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -28,6 +29,9 @@ class InactivateUserServiceTest {
 
 	@Mock
 	private UsuarioRepository usuarioRepository;
+
+	@Mock
+	private AuthenticatedUserValidator authenticatedUserValidator;
 
 	@InjectMocks
 	private InactivateUserService inactivateUserService;
@@ -72,7 +76,6 @@ class InactivateUserServiceTest {
 	void deveInativarUsuarioComSucessoQuandoAutenticadoForAdmin() {
 		AuthenticatedUser usuarioAutenticado = new AuthenticatedUser(1, "admin@email.com", "ADMIN");
 
-		when(usuarioRepository.findById(1)).thenReturn(Optional.of(usuarioAdminAtivo));
 		when(usuarioRepository.findById(2)).thenReturn(Optional.of(usuarioAtivo));
 		when(usuarioRepository.save(usuarioAtivo)).thenReturn(usuarioAtivo);
 
@@ -88,7 +91,6 @@ class InactivateUserServiceTest {
 		AuthenticatedUser usuarioAutenticado = new AuthenticatedUser(1, "admin@email.com", "ADMIN");
 		usuarioAtivo.setAtivo(Boolean.FALSE);
 
-		when(usuarioRepository.findById(1)).thenReturn(Optional.of(usuarioAdminAtivo));
 		when(usuarioRepository.findById(2)).thenReturn(Optional.of(usuarioAtivo));
 
 		InactivateUserResult response = inactivateUserService.inativar(2, usuarioAutenticado);
@@ -101,8 +103,6 @@ class InactivateUserServiceTest {
 	void deveRetornarForbiddenQuandoAdministradorTentarInativarASiMesmo() {
 		AuthenticatedUser usuarioAutenticado = new AuthenticatedUser(2, "admin@email.com", "ADMIN");
 
-		when(usuarioRepository.findById(2)).thenReturn(Optional.of(usuarioAtivo));
-
 		assertThrows(SelfUserDeletionNotAllowedException.class,
 				() -> inactivateUserService.inativar(2, usuarioAutenticado));
 	}
@@ -111,7 +111,6 @@ class InactivateUserServiceTest {
 	void deveRetornarNotFoundQuandoUsuarioNaoExistir() {
 		AuthenticatedUser usuarioAutenticado = new AuthenticatedUser(1, "admin@email.com", "ADMIN");
 
-		when(usuarioRepository.findById(1)).thenReturn(Optional.of(usuarioAdminAtivo));
 		when(usuarioRepository.findById(999)).thenReturn(Optional.empty());
 
 		assertThrows(UserNotFoundException.class, () -> inactivateUserService.inativar(999, usuarioAutenticado));
@@ -121,7 +120,9 @@ class InactivateUserServiceTest {
 	void deveRetornarForbiddenQuandoUsuarioAutenticadoNaoExistir() {
 		AuthenticatedUser usuarioAutenticado = new AuthenticatedUser(1, "admin@email.com", "ADMIN");
 
-		when(usuarioRepository.findById(1)).thenReturn(Optional.empty());
+		doThrow(new AuthenticatedUserInactiveOrNotFoundException())
+				.when(authenticatedUserValidator)
+				.validarUsuarioAtivo(usuarioAutenticado, null);
 
 		assertThrows(AuthenticatedUserInactiveOrNotFoundException.class,
 				() -> inactivateUserService.inativar(2, usuarioAutenticado));
@@ -132,7 +133,9 @@ class InactivateUserServiceTest {
 	void deveRetornarForbiddenQuandoUsuarioAutenticadoEstiverInativo() {
 		AuthenticatedUser usuarioAutenticado = new AuthenticatedUser(1, "admin@email.com", "ADMIN");
 
-		when(usuarioRepository.findById(1)).thenReturn(Optional.of(usuarioAdminInativo));
+		doThrow(new AuthenticatedUserInactiveOrNotFoundException())
+				.when(authenticatedUserValidator)
+				.validarUsuarioAtivo(usuarioAutenticado, null);
 
 		assertThrows(AuthenticatedUserInactiveOrNotFoundException.class,
 				() -> inactivateUserService.inativar(2, usuarioAutenticado));
