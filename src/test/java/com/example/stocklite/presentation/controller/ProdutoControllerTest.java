@@ -3,6 +3,7 @@ package com.example.stocklite.presentation.controller;
 import static org.mockito.Mockito.when;
 import static org.springframework.http.HttpHeaders.AUTHORIZATION;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -32,6 +33,7 @@ import com.example.stocklite.application.security.AuthenticatedUser;
 import com.example.stocklite.application.usecase.AtualizarProdutoService;
 import com.example.stocklite.application.usecase.BuscarProdutoPorIdService;
 import com.example.stocklite.application.usecase.CadastrarProdutoService;
+import com.example.stocklite.application.usecase.InativarProdutoService;
 import com.example.stocklite.application.usecase.ListarProdutosService;
 import com.example.stocklite.domain.repository.PerfilRepository;
 import com.example.stocklite.domain.repository.ProdutoRepository;
@@ -62,6 +64,9 @@ class ProdutoControllerTest {
 
 	@MockitoBean
 	private CadastrarProdutoService cadastrarProdutoService;
+
+	@MockitoBean
+	private InativarProdutoService inativarProdutoService;
 
 	@MockitoBean
 	private ListarProdutosService listarProdutosService;
@@ -317,6 +322,51 @@ class ProdutoControllerTest {
 	}
 
 	@Test
+	void deveExcluirProdutoQuandoTokenForValidoEUsuarioForAdmin() throws Exception {
+		AuthenticatedUser usuarioAutenticado = new AuthenticatedUser(1, "admin@email.com", "ADMIN");
+
+		when(tokenService.parseToken(TOKEN_VALIDO)).thenReturn(usuarioAutenticado);
+		when(inativarProdutoService.inativar(1, usuarioAutenticado))
+				.thenReturn(new com.example.stocklite.application.dto.MessageResponse("Produto excluido com sucesso."));
+
+		mockMvc.perform(delete("/v1/api/produtos/1")
+				.contextPath(CONTEXT_PATH)
+				.header(AUTHORIZATION, "Bearer " + TOKEN_VALIDO))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.mensagem").value("Produto excluido com sucesso."));
+	}
+
+	@Test
+	void deveExcluirProdutoQuandoTokenForValidoEUsuarioForEstoquista() throws Exception {
+		AuthenticatedUser usuarioAutenticado = new AuthenticatedUser(2, "estoque@email.com", "ESTOQUISTA");
+
+		when(tokenService.parseToken(TOKEN_VALIDO)).thenReturn(usuarioAutenticado);
+		when(inativarProdutoService.inativar(1, usuarioAutenticado))
+				.thenReturn(new com.example.stocklite.application.dto.MessageResponse("Produto excluido com sucesso."));
+
+		mockMvc.perform(delete("/v1/api/produtos/1")
+				.contextPath(CONTEXT_PATH)
+				.header(AUTHORIZATION, "Bearer " + TOKEN_VALIDO))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.mensagem").value("Produto excluido com sucesso."));
+	}
+
+	@Test
+	void deveRetornarMensagemIdempotenteQuandoProdutoJaEstiverInativoNaExclusao() throws Exception {
+		AuthenticatedUser usuarioAutenticado = new AuthenticatedUser(1, "admin@email.com", "ADMIN");
+
+		when(tokenService.parseToken(TOKEN_VALIDO)).thenReturn(usuarioAutenticado);
+		when(inativarProdutoService.inativar(1, usuarioAutenticado))
+				.thenReturn(new com.example.stocklite.application.dto.MessageResponse("Produto ja estava inativo."));
+
+		mockMvc.perform(delete("/v1/api/produtos/1")
+				.contextPath(CONTEXT_PATH)
+				.header(AUTHORIZATION, "Bearer " + TOKEN_VALIDO))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.mensagem").value("Produto ja estava inativo."));
+	}
+
+	@Test
 	void deveBuscarProdutoQuandoTokenForValidoEUsuarioForVisualizador() throws Exception {
 		AuthenticatedUser usuarioAutenticado = new AuthenticatedUser(3, "viewer@email.com", "VISUALIZADOR");
 
@@ -378,6 +428,14 @@ class ProdutoControllerTest {
 						  "quantidadeEstoque": 15
 						}
 						"""))
+				.andExpect(status().isUnauthorized())
+				.andExpect(jsonPath("$.mensagem").value("Token invalido ou nao informado."));
+	}
+
+	@Test
+	void deveRetornarUnauthorizedQuandoTokenNaoForInformadoNaExclusao() throws Exception {
+		mockMvc.perform(delete("/v1/api/produtos/1")
+				.contextPath(CONTEXT_PATH))
 				.andExpect(status().isUnauthorized())
 				.andExpect(jsonPath("$.mensagem").value("Token invalido ou nao informado."));
 	}
@@ -445,6 +503,17 @@ class ProdutoControllerTest {
 	}
 
 	@Test
+	void deveRetornarUnauthorizedQuandoTokenForInvalidoNaExclusao() throws Exception {
+		when(tokenService.parseToken(TOKEN_INVALIDO)).thenThrow(new RuntimeException("Token invalido"));
+
+		mockMvc.perform(delete("/v1/api/produtos/1")
+				.contextPath(CONTEXT_PATH)
+				.header(AUTHORIZATION, "Bearer " + TOKEN_INVALIDO))
+				.andExpect(status().isUnauthorized())
+				.andExpect(jsonPath("$.mensagem").value("Token invalido ou nao informado."));
+	}
+
+	@Test
 	void deveRetornarForbiddenQuandoUsuarioNaoTiverPermissao() throws Exception {
 		when(tokenService.parseToken(TOKEN_VALIDO))
 				.thenReturn(new AuthenticatedUser(10, "operador@email.com", "OPERADOR"));
@@ -505,6 +574,18 @@ class ProdutoControllerTest {
 						  "quantidadeEstoque": 15
 						}
 						""")
+				.header(AUTHORIZATION, "Bearer " + TOKEN_VALIDO))
+				.andExpect(status().isForbidden())
+				.andExpect(jsonPath("$.mensagem").value("Usuario sem permissao para executar esta acao."));
+	}
+
+	@Test
+	void deveRetornarForbiddenQuandoUsuarioNaoTiverPermissaoNaExclusao() throws Exception {
+		when(tokenService.parseToken(TOKEN_VALIDO))
+				.thenReturn(new AuthenticatedUser(10, "operador@email.com", "OPERADOR"));
+
+		mockMvc.perform(delete("/v1/api/produtos/1")
+				.contextPath(CONTEXT_PATH)
 				.header(AUTHORIZATION, "Bearer " + TOKEN_VALIDO))
 				.andExpect(status().isForbidden())
 				.andExpect(jsonPath("$.mensagem").value("Usuario sem permissao para executar esta acao."));
@@ -586,6 +667,21 @@ class ProdutoControllerTest {
 						  "quantidadeEstoque": 15
 						}
 						""")
+				.header(AUTHORIZATION, "Bearer " + TOKEN_VALIDO))
+				.andExpect(status().isForbidden())
+				.andExpect(jsonPath("$.mensagem").value("Usuario autenticado inexistente ou inativo."));
+	}
+
+	@Test
+	void deveRetornarForbiddenQuandoUsuarioAutenticadoEstiverInativoOuInexistenteNaExclusao() throws Exception {
+		AuthenticatedUser usuarioAutenticado = new AuthenticatedUser(3, "viewer@email.com", "ESTOQUISTA");
+
+		when(tokenService.parseToken(TOKEN_VALIDO)).thenReturn(usuarioAutenticado);
+		when(inativarProdutoService.inativar(1, usuarioAutenticado))
+				.thenThrow(new AuthenticatedUserInactiveOrNotFoundException());
+
+		mockMvc.perform(delete("/v1/api/produtos/1")
+				.contextPath(CONTEXT_PATH)
 				.header(AUTHORIZATION, "Bearer " + TOKEN_VALIDO))
 				.andExpect(status().isForbidden())
 				.andExpect(jsonPath("$.mensagem").value("Usuario autenticado inexistente ou inativo."));
@@ -735,6 +831,21 @@ class ProdutoControllerTest {
 	}
 
 	@Test
+	void deveRetornarNotFoundQuandoProdutoNaoExistirNaExclusao() throws Exception {
+		AuthenticatedUser usuarioAutenticado = new AuthenticatedUser(1, "admin@email.com", "ADMIN");
+
+		when(tokenService.parseToken(TOKEN_VALIDO)).thenReturn(usuarioAutenticado);
+		when(inativarProdutoService.inativar(99, usuarioAutenticado))
+				.thenThrow(new ProductNotFoundException());
+
+		mockMvc.perform(delete("/v1/api/produtos/99")
+				.contextPath(CONTEXT_PATH)
+				.header(AUTHORIZATION, "Bearer " + TOKEN_VALIDO))
+				.andExpect(status().isNotFound())
+				.andExpect(jsonPath("$.mensagem").value("Produto nao encontrado."));
+	}
+
+	@Test
 	void deveRetornarBadRequestQuandoIdNaoForNumerico() throws Exception {
 		when(tokenService.parseToken(TOKEN_VALIDO))
 				.thenReturn(new AuthenticatedUser(1, "admin@email.com", "ADMIN"));
@@ -762,6 +873,18 @@ class ProdutoControllerTest {
 						  "quantidadeEstoque": 15
 						}
 						""")
+				.header(AUTHORIZATION, "Bearer " + TOKEN_VALIDO))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.mensagem").value("Identificador do produto invalido."));
+	}
+
+	@Test
+	void deveRetornarBadRequestQuandoIdDaExclusaoNaoForNumerico() throws Exception {
+		when(tokenService.parseToken(TOKEN_VALIDO))
+				.thenReturn(new AuthenticatedUser(1, "admin@email.com", "ADMIN"));
+
+		mockMvc.perform(delete("/v1/api/produtos/abc")
+				.contextPath(CONTEXT_PATH)
 				.header(AUTHORIZATION, "Bearer " + TOKEN_VALIDO))
 				.andExpect(status().isBadRequest())
 				.andExpect(jsonPath("$.mensagem").value("Identificador do produto invalido."));

@@ -63,7 +63,7 @@ class ListarProdutosServiceTest {
 	}
 
 	@Test
-	void deveRetornarListaResumidaQuandoUsuarioAutenticadoForValido() {
+	void deveRetornarApenasProdutosAtivosQuandoUsuarioAutenticadoForValido() {
 		AuthenticatedUser usuarioAutenticado = new AuthenticatedUser(1, "admin@email.com", "ADMIN");
 
 		when(produtoRepository.findAll()).thenReturn(List.of(produtoMouse, produtoTeclado));
@@ -71,8 +71,7 @@ class ListarProdutosServiceTest {
 		List<ProdutoListagemResponse> response = listarProdutosService.listar(usuarioAutenticado);
 
 		assertEquals(List.of(
-				new ProdutoListagemResponse(10, "Mouse sem fio", new BigDecimal("59.90")),
-				new ProdutoListagemResponse(11, "Teclado mecanico", new BigDecimal("199.90"))), response);
+				new ProdutoListagemResponse(10, "Mouse sem fio", new BigDecimal("59.90"))), response);
 	}
 
 	@Test

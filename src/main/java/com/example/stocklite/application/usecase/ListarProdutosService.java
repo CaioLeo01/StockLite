@@ -26,6 +26,7 @@ public class ListarProdutosService {
 		authenticatedUserValidator.validarUsuarioAtivo(usuarioAutenticado, "ao listar produtos");
 
 		return produtoRepository.findAll().stream()
+				.filter(produto -> !produto.estaInativo())
 				.map(this::toResponse)
 				.toList();
 	}

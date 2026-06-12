@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -24,6 +25,7 @@ import com.example.stocklite.application.security.AuthenticatedUser;
 import com.example.stocklite.application.usecase.AtualizarProdutoService;
 import com.example.stocklite.application.usecase.BuscarProdutoPorIdService;
 import com.example.stocklite.application.usecase.CadastrarProdutoService;
+import com.example.stocklite.application.usecase.InativarProdutoService;
 import com.example.stocklite.application.usecase.ListarProdutosService;
 
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -37,16 +39,19 @@ public class ProdutoController {
 	private final AtualizarProdutoService atualizarProdutoService;
 	private final BuscarProdutoPorIdService buscarProdutoPorIdService;
 	private final CadastrarProdutoService cadastrarProdutoService;
+	private final InativarProdutoService inativarProdutoService;
 	private final ListarProdutosService listarProdutosService;
 
 	public ProdutoController(
 			AtualizarProdutoService atualizarProdutoService,
 			BuscarProdutoPorIdService buscarProdutoPorIdService,
 			CadastrarProdutoService cadastrarProdutoService,
+			InativarProdutoService inativarProdutoService,
 			ListarProdutosService listarProdutosService) {
 		this.atualizarProdutoService = atualizarProdutoService;
 		this.buscarProdutoPorIdService = buscarProdutoPorIdService;
 		this.cadastrarProdutoService = cadastrarProdutoService;
+		this.inativarProdutoService = inativarProdutoService;
 		this.listarProdutosService = listarProdutosService;
 	}
 
@@ -81,5 +86,13 @@ public class ProdutoController {
 			@Valid @RequestBody AtualizarProdutoRequest request,
 			@AuthenticationPrincipal AuthenticatedUser usuarioAutenticado) {
 		return ResponseEntity.ok(atualizarProdutoService.atualizar(idProduto, request, usuarioAutenticado));
+	}
+
+	@DeleteMapping("/{id}")
+	@PreAuthorize("hasAnyRole('ADMIN','ESTOQUISTA')")
+	public ResponseEntity<MessageResponse> excluir(
+			@PathVariable("id") Integer idProduto,
+			@AuthenticationPrincipal AuthenticatedUser usuarioAutenticado) {
+		return ResponseEntity.ok(inativarProdutoService.inativar(idProduto, usuarioAutenticado));
 	}
 }
