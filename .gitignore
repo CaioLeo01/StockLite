@@ -39,3 +39,4 @@ build/
 ### .env files ###
 application-dev.properties
 application-prod.properties
+application-homol.properties
