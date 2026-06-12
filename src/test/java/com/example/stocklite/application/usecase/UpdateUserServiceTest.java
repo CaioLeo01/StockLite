@@ -20,7 +20,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.example.stocklite.application.dto.AtualizarUsuarioRequest;
-import com.example.stocklite.application.dto.UsuarioResponse;
+import com.example.stocklite.application.dto.MessageResponse;
 import com.example.stocklite.application.exception.AuthenticatedUserInactiveOrNotFoundException;
 import com.example.stocklite.application.exception.ProfileNotFoundException;
 import com.example.stocklite.application.exception.SelfUserUpdateNotAllowedException;
@@ -102,7 +102,7 @@ class UpdateUserServiceTest {
 		when(usuarioRepository.findByEmailIgnoreCase("maria.silva@email.com")).thenReturn(Optional.empty());
 		when(usuarioRepository.save(any(Usuario.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-		UsuarioResponse response = updateUserService.atualizar(2, request, usuarioAutenticado);
+		MessageResponse response = updateUserService.atualizar(2, request, usuarioAutenticado);
 
 		ArgumentCaptor<Usuario> usuarioCaptor = ArgumentCaptor.forClass(Usuario.class);
 		verify(usuarioRepository).save(usuarioCaptor.capture());
@@ -114,11 +114,7 @@ class UpdateUserServiceTest {
 		assertFalse(usuarioSalvo.getAtivo());
 		assertEquals("senha-antiga", usuarioSalvo.getSenha());
 
-		assertEquals(2, response.idUsuario());
-		assertEquals("Maria Silva", response.nome());
-		assertEquals("maria.silva@email.com", response.email());
-		assertEquals("OPERADOR", response.perfilNome());
-		assertFalse(response.status());
+		assertEquals("Usuario atualizado com sucesso.", response.mensagem());
 	}
 
 	@Test
@@ -135,9 +131,9 @@ class UpdateUserServiceTest {
 		when(usuarioRepository.findByEmailIgnoreCase("maria@email.com")).thenReturn(Optional.of(usuarioAlvo));
 		when(usuarioRepository.save(any(Usuario.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-		UsuarioResponse response = updateUserService.atualizar(2, request, usuarioAutenticado);
+		MessageResponse response = updateUserService.atualizar(2, request, usuarioAutenticado);
 
-		assertEquals("maria@email.com", response.email());
+		assertEquals("Usuario atualizado com sucesso.", response.mensagem());
 		verify(usuarioRepository).save(usuarioAlvo);
 	}
 

@@ -5,7 +5,7 @@ import java.util.Locale;
 import org.springframework.stereotype.Service;
 
 import com.example.stocklite.application.dto.AtualizarUsuarioRequest;
-import com.example.stocklite.application.dto.UsuarioResponse;
+import com.example.stocklite.application.dto.MessageResponse;
 import com.example.stocklite.application.exception.ProfileNotFoundException;
 import com.example.stocklite.application.exception.SelfUserUpdateNotAllowedException;
 import com.example.stocklite.application.exception.UserNotFoundException;
@@ -32,7 +32,7 @@ public class UpdateUserService {
 		this.authenticatedUserValidator = authenticatedUserValidator;
 	}
 
-	public UsuarioResponse atualizar(
+	public MessageResponse atualizar(
 			Integer idUsuarioAlvo,
 			AtualizarUsuarioRequest request,
 			AuthenticatedUser usuarioAutenticado) {
@@ -53,8 +53,8 @@ public class UpdateUserService {
 		usuario.setPerfil(perfil);
 		usuario.setAtivo(request.status());
 
-		Usuario usuarioAtualizado = usuarioRepository.save(usuario);
-		return toResponse(usuarioAtualizado);
+		usuarioRepository.save(usuario);
+		return new MessageResponse("Usuario atualizado com sucesso.");
 	}
 
 	private void validarAutoAtualizacao(Integer idUsuarioAlvo, AuthenticatedUser usuarioAutenticado) {
@@ -73,14 +73,5 @@ public class UpdateUserService {
 
 	private String normalizarEmail(String email) {
 		return email.trim().toLowerCase(Locale.ROOT);
-	}
-
-	private UsuarioResponse toResponse(Usuario usuario) {
-		return new UsuarioResponse(
-				usuario.getIdUsuario(),
-				usuario.getNome(),
-				usuario.getEmail(),
-				usuario.getPerfil().getNome(),
-				usuario.getAtivo());
 	}
 }

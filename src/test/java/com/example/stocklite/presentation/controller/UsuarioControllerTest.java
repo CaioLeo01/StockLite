@@ -19,8 +19,8 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.example.stocklite.application.port.PasswordHasher;
+import com.example.stocklite.application.dto.MessageResponse;
 import com.example.stocklite.application.dto.UsuarioListagemResponse;
-import com.example.stocklite.application.dto.UsuarioResponse;
 import com.example.stocklite.application.exception.AuthenticatedUserInactiveOrNotFoundException;
 import com.example.stocklite.application.exception.ProfileNotFoundException;
 import com.example.stocklite.application.exception.SelfUserUpdateNotAllowedException;
@@ -138,12 +138,7 @@ class UsuarioControllerTest {
 	@Test
 	void deveAtualizarUsuarioQuandoTokenForValidoEUsuarioForAdmin() throws Exception {
 		AuthenticatedUser usuarioAutenticado = new AuthenticatedUser(1, "admin@email.com", "ADMIN");
-		UsuarioResponse response = new UsuarioResponse(
-				2,
-				"Maria Silva",
-				"maria.silva@email.com",
-				"OPERADOR",
-				Boolean.FALSE);
+		MessageResponse response = new MessageResponse("Usuario atualizado com sucesso.");
 
 		when(tokenService.parseToken(TOKEN_VALIDO)).thenReturn(usuarioAutenticado);
 		when(updateUserService.atualizar(org.mockito.ArgumentMatchers.eq(2), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.eq(usuarioAutenticado)))
@@ -162,11 +157,7 @@ class UsuarioControllerTest {
 						""")
 				.header(AUTHORIZATION, "Bearer " + TOKEN_VALIDO))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.idUsuario").value(2))
-				.andExpect(jsonPath("$.nome").value("Maria Silva"))
-				.andExpect(jsonPath("$.email").value("maria.silva@email.com"))
-				.andExpect(jsonPath("$.perfilNome").value("OPERADOR"))
-				.andExpect(jsonPath("$.status").value(false));
+				.andExpect(jsonPath("$.mensagem").value("Usuario atualizado com sucesso."));
 	}
 
 	@Test
