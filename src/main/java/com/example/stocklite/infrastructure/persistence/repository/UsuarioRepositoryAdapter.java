@@ -1,4 +1,5 @@
 package com.example.stocklite.infrastructure.persistence.repository;
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.stereotype.Repository;
@@ -29,6 +30,19 @@ public class UsuarioRepositoryAdapter implements UsuarioRepository {
 	public Optional<Usuario> findByEmailIgnoreCase(String email) {
 		return springDataUsuarioRepository.findByEmailIgnoreCase(email)
 				.map(usuarioPersistenceMapper::toDomain);
+	}
+
+	@Override
+	public Optional<Usuario> findById(Integer idUsuario) {
+		return springDataUsuarioRepository.findById(idUsuario)
+				.map(usuarioPersistenceMapper::toDomain);
+	}
+
+	@Override
+	public List<Usuario> findAll() {
+		return springDataUsuarioRepository.findAll().stream()
+				.map(usuarioPersistenceMapper::toDomain)
+				.toList();
 	}
 
 	@Override

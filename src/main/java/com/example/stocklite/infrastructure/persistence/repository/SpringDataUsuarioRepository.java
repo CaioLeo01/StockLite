@@ -1,4 +1,5 @@
 package com.example.stocklite.infrastructure.persistence.repository;
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -12,4 +13,12 @@ public interface SpringDataUsuarioRepository extends JpaRepository<UsuarioEntity
 
 	@EntityGraph(attributePaths = "perfil")
 	Optional<UsuarioEntity> findByEmailIgnoreCase(String email);
+
+	@Override
+	@EntityGraph(attributePaths = "perfil")
+	Optional<UsuarioEntity> findById(Integer idUsuario);
+
+	@Override
+	@EntityGraph(attributePaths = "perfil")
+	List<UsuarioEntity> findAll();
 }

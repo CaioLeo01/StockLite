@@ -1,0 +1,100 @@
+name: Deploy Railway on Tag
+
+on:
+  push:
+    tags:
+      - "homol*"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-railway-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate homol tag
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          CURRENT_TAG="${GITHUB_REF_NAME}"
+          TAG_REGEX='^homol([0-9]{2})\.([0-9]{2})\.([0-9]{2})$'
+
+          if [[ ! "$CURRENT_TAG" =~ $TAG_REGEX ]]; then
+            echo "Tag invalida: $CURRENT_TAG"
+            echo "Use o padrao exato homol00.00.00"
+            exit 1
+          fi
+
+          current_major="${BASH_REMATCH[1]}"
+          current_minor="${BASH_REMATCH[2]}"
+          current_patch="${BASH_REMATCH[3]}"
+          current_version_value=$((10#$current_major * 10000 + 10#$current_minor * 100 + 10#$current_patch))
+
+          previous_tag="$(
+            git tag -l 'homol*' \
+              | grep -E '^homol[0-9]{2}\.[0-9]{2}\.[0-9]{2}$' \
+              | grep -vx "$CURRENT_TAG" \
+              | sort -V \
+              | tail -n 1 \
+              || true
+          )"
+
+          if [[ -n "$previous_tag" ]]; then
+            if [[ ! "$previous_tag" =~ $TAG_REGEX ]]; then
+              echo "Tag existente invalida encontrada: $previous_tag"
+              exit 1
+            fi
+
+            previous_major="${BASH_REMATCH[1]}"
+            previous_minor="${BASH_REMATCH[2]}"
+            previous_patch="${BASH_REMATCH[3]}"
+            previous_version_value=$((10#$previous_major * 10000 + 10#$previous_minor * 100 + 10#$previous_patch))
+
+            if (( current_version_value <= previous_version_value )); then
+              echo "A tag $CURRENT_TAG nao e maior que a ultima tag valida $previous_tag"
+              exit 1
+            fi
+          fi
+
+          echo "Tag validada com sucesso: $CURRENT_TAG"
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: Run tests
+        run: |
+          chmod +x ./mvnw
+          ./mvnw test
+
+      - name: Deploy to Railway
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
+          RAILWAY_ENVIRONMENT_NAME: ${{ secrets.RAILWAY_ENVIRONMENT_NAME }}
+          RAILWAY_SERVICE_NAME: ${{ secrets.RAILWAY_SERVICE_NAME }}
+        run: |
+          docker run --rm \
+            -e RAILWAY_TOKEN \
+            -e RAILWAY_PROJECT_ID \
+            -e RAILWAY_ENVIRONMENT_NAME \
+            -e RAILWAY_SERVICE_NAME \
+            -v "$PWD:/app" \
+            -w /app \
+            ghcr.io/railwayapp/cli:latest \
+            railway up --ci --project "$RAILWAY_PROJECT_ID" --environment "$RAILWAY_ENVIRONMENT_NAME" --service "$RAILWAY_SERVICE_NAME"

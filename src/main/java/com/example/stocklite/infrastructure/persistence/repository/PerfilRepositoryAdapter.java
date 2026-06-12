@@ -22,6 +22,12 @@ public class PerfilRepositoryAdapter implements PerfilRepository {
 	}
 
 	@Override
+	public Optional<Perfil> findById(Integer idPerfil) {
+		return springDataPerfilRepository.findById(idPerfil)
+				.map(perfilPersistenceMapper::toDomain);
+	}
+
+	@Override
 	public Optional<Perfil> findByNomeIgnoreCase(String nome) {
 		return springDataPerfilRepository.findByNomeIgnoreCase(nome)
 				.map(perfilPersistenceMapper::toDomain);
