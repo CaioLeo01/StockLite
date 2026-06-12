@@ -5,6 +5,7 @@ import static org.springframework.http.HttpHeaders.AUTHORIZATION;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -28,6 +29,7 @@ import com.example.stocklite.application.exception.ProductNotFoundException;
 import com.example.stocklite.application.port.PasswordHasher;
 import com.example.stocklite.application.port.TokenService;
 import com.example.stocklite.application.security.AuthenticatedUser;
+import com.example.stocklite.application.usecase.AtualizarProdutoService;
 import com.example.stocklite.application.usecase.BuscarProdutoPorIdService;
 import com.example.stocklite.application.usecase.CadastrarProdutoService;
 import com.example.stocklite.application.usecase.ListarProdutosService;
@@ -54,6 +56,9 @@ class ProdutoControllerTest {
 
 	@MockitoBean
 	private BuscarProdutoPorIdService buscarProdutoPorIdService;
+
+	@MockitoBean
+	private AtualizarProdutoService atualizarProdutoService;
 
 	@MockitoBean
 	private CadastrarProdutoService cadastrarProdutoService;
@@ -258,6 +263,60 @@ class ProdutoControllerTest {
 	}
 
 	@Test
+	void deveAtualizarProdutoQuandoTokenForValidoEUsuarioForAdmin() throws Exception {
+		AuthenticatedUser usuarioAutenticado = new AuthenticatedUser(1, "admin@email.com", "ADMIN");
+
+		when(tokenService.parseToken(TOKEN_VALIDO)).thenReturn(usuarioAutenticado);
+		when(atualizarProdutoService.atualizar(
+				org.mockito.ArgumentMatchers.eq(1),
+				org.mockito.ArgumentMatchers.any(),
+				org.mockito.ArgumentMatchers.eq(usuarioAutenticado)))
+				.thenReturn(new com.example.stocklite.application.dto.MessageResponse("Produto atualizado com sucesso"));
+
+		mockMvc.perform(put("/v1/api/produtos/1")
+				.contextPath(CONTEXT_PATH)
+				.contentType(APPLICATION_JSON)
+				.content("""
+						{
+						  "nome": "Teclado mecanico atualizado",
+						  "descricao": "Teclado mecanico ABNT2 com iluminacao RGB",
+						  "preco": 275.00,
+						  "quantidadeEstoque": 15
+						}
+						""")
+				.header(AUTHORIZATION, "Bearer " + TOKEN_VALIDO))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.mensagem").value("Produto atualizado com sucesso"));
+	}
+
+	@Test
+	void deveAtualizarProdutoQuandoTokenForValidoEUsuarioForEstoquista() throws Exception {
+		AuthenticatedUser usuarioAutenticado = new AuthenticatedUser(2, "estoque@email.com", "ESTOQUISTA");
+
+		when(tokenService.parseToken(TOKEN_VALIDO)).thenReturn(usuarioAutenticado);
+		when(atualizarProdutoService.atualizar(
+				org.mockito.ArgumentMatchers.eq(1),
+				org.mockito.ArgumentMatchers.any(),
+				org.mockito.ArgumentMatchers.eq(usuarioAutenticado)))
+				.thenReturn(new com.example.stocklite.application.dto.MessageResponse("Produto atualizado com sucesso"));
+
+		mockMvc.perform(put("/v1/api/produtos/1")
+				.contextPath(CONTEXT_PATH)
+				.contentType(APPLICATION_JSON)
+				.content("""
+						{
+						  "nome": "Mouse gamer atualizado",
+						  "descricao": null,
+						  "preco": 155.00,
+						  "quantidadeEstoque": 6
+						}
+						""")
+				.header(AUTHORIZATION, "Bearer " + TOKEN_VALIDO))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.mensagem").value("Produto atualizado com sucesso"));
+	}
+
+	@Test
 	void deveBuscarProdutoQuandoTokenForValidoEUsuarioForVisualizador() throws Exception {
 		AuthenticatedUser usuarioAutenticado = new AuthenticatedUser(3, "viewer@email.com", "VISUALIZADOR");
 
@@ -307,6 +366,23 @@ class ProdutoControllerTest {
 	}
 
 	@Test
+	void deveRetornarUnauthorizedQuandoTokenNaoForInformadoNaAtualizacao() throws Exception {
+		mockMvc.perform(put("/v1/api/produtos/1")
+				.contextPath(CONTEXT_PATH)
+				.contentType(APPLICATION_JSON)
+				.content("""
+						{
+						  "nome": "Teclado mecanico atualizado",
+						  "descricao": "Teclado mecanico ABNT2 com iluminacao RGB",
+						  "preco": 275.00,
+						  "quantidadeEstoque": 15
+						}
+						"""))
+				.andExpect(status().isUnauthorized())
+				.andExpect(jsonPath("$.mensagem").value("Token invalido ou nao informado."));
+	}
+
+	@Test
 	void deveRetornarUnauthorizedQuandoTokenForInvalido() throws Exception {
 		when(tokenService.parseToken(TOKEN_INVALIDO)).thenThrow(new RuntimeException("Token invalido"));
 
@@ -341,6 +417,26 @@ class ProdutoControllerTest {
 						  "descricao": "Teclado ABNT2",
 						  "preco": 250.00,
 						  "quantidadeInicial": 10
+						}
+						""")
+				.header(AUTHORIZATION, "Bearer " + TOKEN_INVALIDO))
+				.andExpect(status().isUnauthorized())
+				.andExpect(jsonPath("$.mensagem").value("Token invalido ou nao informado."));
+	}
+
+	@Test
+	void deveRetornarUnauthorizedQuandoTokenForInvalidoNaAtualizacao() throws Exception {
+		when(tokenService.parseToken(TOKEN_INVALIDO)).thenThrow(new RuntimeException("Token invalido"));
+
+		mockMvc.perform(put("/v1/api/produtos/1")
+				.contextPath(CONTEXT_PATH)
+				.contentType(APPLICATION_JSON)
+				.content("""
+						{
+						  "nome": "Teclado mecanico atualizado",
+						  "descricao": "Teclado mecanico ABNT2 com iluminacao RGB",
+						  "preco": 275.00,
+						  "quantidadeEstoque": 15
 						}
 						""")
 				.header(AUTHORIZATION, "Bearer " + TOKEN_INVALIDO))
@@ -386,6 +482,27 @@ class ProdutoControllerTest {
 						  "descricao": "Teclado ABNT2",
 						  "preco": 250.00,
 						  "quantidadeInicial": 10
+						}
+						""")
+				.header(AUTHORIZATION, "Bearer " + TOKEN_VALIDO))
+				.andExpect(status().isForbidden())
+				.andExpect(jsonPath("$.mensagem").value("Usuario sem permissao para executar esta acao."));
+	}
+
+	@Test
+	void deveRetornarForbiddenQuandoUsuarioNaoTiverPermissaoNaAtualizacao() throws Exception {
+		when(tokenService.parseToken(TOKEN_VALIDO))
+				.thenReturn(new AuthenticatedUser(10, "operador@email.com", "OPERADOR"));
+
+		mockMvc.perform(put("/v1/api/produtos/1")
+				.contextPath(CONTEXT_PATH)
+				.contentType(APPLICATION_JSON)
+				.content("""
+						{
+						  "nome": "Teclado mecanico atualizado",
+						  "descricao": "Teclado mecanico ABNT2 com iluminacao RGB",
+						  "preco": 275.00,
+						  "quantidadeEstoque": 15
 						}
 						""")
 				.header(AUTHORIZATION, "Bearer " + TOKEN_VALIDO))
@@ -448,6 +565,33 @@ class ProdutoControllerTest {
 	}
 
 	@Test
+	void deveRetornarForbiddenQuandoUsuarioAutenticadoEstiverInativoOuInexistenteNaAtualizacao() throws Exception {
+		AuthenticatedUser usuarioAutenticado = new AuthenticatedUser(3, "viewer@email.com", "ESTOQUISTA");
+
+		when(tokenService.parseToken(TOKEN_VALIDO)).thenReturn(usuarioAutenticado);
+		when(atualizarProdutoService.atualizar(
+				org.mockito.ArgumentMatchers.eq(1),
+				org.mockito.ArgumentMatchers.any(),
+				org.mockito.ArgumentMatchers.eq(usuarioAutenticado)))
+				.thenThrow(new AuthenticatedUserInactiveOrNotFoundException());
+
+		mockMvc.perform(put("/v1/api/produtos/1")
+				.contextPath(CONTEXT_PATH)
+				.contentType(APPLICATION_JSON)
+				.content("""
+						{
+						  "nome": "Teclado mecanico atualizado",
+						  "descricao": "Teclado mecanico ABNT2 com iluminacao RGB",
+						  "preco": 275.00,
+						  "quantidadeEstoque": 15
+						}
+						""")
+				.header(AUTHORIZATION, "Bearer " + TOKEN_VALIDO))
+				.andExpect(status().isForbidden())
+				.andExpect(jsonPath("$.mensagem").value("Usuario autenticado inexistente ou inativo."));
+	}
+
+	@Test
 	void deveRetornarBadRequestQuandoDadosDoCadastroForemInvalidos() throws Exception {
 		when(tokenService.parseToken(TOKEN_VALIDO))
 				.thenReturn(new AuthenticatedUser(1, "admin@email.com", "ADMIN"));
@@ -470,6 +614,31 @@ class ProdutoControllerTest {
 						Matchers.containsString("A descricao deve ter no maximo 255 caracteres."),
 						Matchers.containsString("O preco deve ser maior que zero."),
 						Matchers.containsString("A quantidade inicial nao pode ser negativa."))));
+	}
+
+	@Test
+	void deveRetornarBadRequestQuandoDadosDaAtualizacaoForemInvalidos() throws Exception {
+		when(tokenService.parseToken(TOKEN_VALIDO))
+				.thenReturn(new AuthenticatedUser(1, "admin@email.com", "ADMIN"));
+
+		mockMvc.perform(put("/v1/api/produtos/1")
+				.contextPath(CONTEXT_PATH)
+				.contentType(APPLICATION_JSON)
+				.content("""
+						{
+						  "nome": " ",
+						  "descricao": "x".repeat(256),
+						  "preco": 0,
+						  "quantidadeEstoque": -1
+						}
+						""".replace("\"x\".repeat(256)", "\"" + "x".repeat(256) + "\""))
+				.header(AUTHORIZATION, "Bearer " + TOKEN_VALIDO))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.mensagem").value(Matchers.allOf(
+						Matchers.containsString("O nome e obrigatorio."),
+						Matchers.containsString("A descricao deve ter no maximo 255 caracteres."),
+						Matchers.containsString("O preco deve ser maior que zero."),
+						Matchers.containsString("A quantidade em estoque nao pode ser negativa."))));
 	}
 
 	@Test
@@ -497,6 +666,33 @@ class ProdutoControllerTest {
 	}
 
 	@Test
+	void deveRetornarConflictQuandoProdutoJaExistirNaAtualizacao() throws Exception {
+		AuthenticatedUser usuarioAutenticado = new AuthenticatedUser(1, "admin@email.com", "ADMIN");
+
+		when(tokenService.parseToken(TOKEN_VALIDO)).thenReturn(usuarioAutenticado);
+		when(atualizarProdutoService.atualizar(
+				org.mockito.ArgumentMatchers.eq(1),
+				org.mockito.ArgumentMatchers.any(),
+				org.mockito.ArgumentMatchers.eq(usuarioAutenticado)))
+				.thenThrow(new ProductAlreadyExistsException());
+
+		mockMvc.perform(put("/v1/api/produtos/1")
+				.contextPath(CONTEXT_PATH)
+				.contentType(APPLICATION_JSON)
+				.content("""
+						{
+						  "nome": "Teclado mecanico atualizado",
+						  "descricao": "Teclado mecanico ABNT2 com iluminacao RGB",
+						  "preco": 275.00,
+						  "quantidadeEstoque": 15
+						}
+						""")
+				.header(AUTHORIZATION, "Bearer " + TOKEN_VALIDO))
+				.andExpect(status().isConflict())
+				.andExpect(jsonPath("$.mensagem").value("Ja existe um produto cadastrado com estes dados."));
+	}
+
+	@Test
 	void deveRetornarNotFoundQuandoProdutoNaoExistir() throws Exception {
 		AuthenticatedUser usuarioAutenticado = new AuthenticatedUser(1, "admin@email.com", "ADMIN");
 
@@ -512,12 +708,60 @@ class ProdutoControllerTest {
 	}
 
 	@Test
+	void deveRetornarNotFoundQuandoProdutoNaoExistirNaAtualizacao() throws Exception {
+		AuthenticatedUser usuarioAutenticado = new AuthenticatedUser(1, "admin@email.com", "ADMIN");
+
+		when(tokenService.parseToken(TOKEN_VALIDO)).thenReturn(usuarioAutenticado);
+		when(atualizarProdutoService.atualizar(
+				org.mockito.ArgumentMatchers.eq(99),
+				org.mockito.ArgumentMatchers.any(),
+				org.mockito.ArgumentMatchers.eq(usuarioAutenticado)))
+				.thenThrow(new ProductNotFoundException());
+
+		mockMvc.perform(put("/v1/api/produtos/99")
+				.contextPath(CONTEXT_PATH)
+				.contentType(APPLICATION_JSON)
+				.content("""
+						{
+						  "nome": "Teclado mecanico atualizado",
+						  "descricao": "Teclado mecanico ABNT2 com iluminacao RGB",
+						  "preco": 275.00,
+						  "quantidadeEstoque": 15
+						}
+						""")
+				.header(AUTHORIZATION, "Bearer " + TOKEN_VALIDO))
+				.andExpect(status().isNotFound())
+				.andExpect(jsonPath("$.mensagem").value("Produto nao encontrado."));
+	}
+
+	@Test
 	void deveRetornarBadRequestQuandoIdNaoForNumerico() throws Exception {
 		when(tokenService.parseToken(TOKEN_VALIDO))
 				.thenReturn(new AuthenticatedUser(1, "admin@email.com", "ADMIN"));
 
 		mockMvc.perform(get("/v1/api/produtos/abc")
 				.contextPath(CONTEXT_PATH)
+				.header(AUTHORIZATION, "Bearer " + TOKEN_VALIDO))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.mensagem").value("Identificador do produto invalido."));
+	}
+
+	@Test
+	void deveRetornarBadRequestQuandoIdDaAtualizacaoNaoForNumerico() throws Exception {
+		when(tokenService.parseToken(TOKEN_VALIDO))
+				.thenReturn(new AuthenticatedUser(1, "admin@email.com", "ADMIN"));
+
+		mockMvc.perform(put("/v1/api/produtos/abc")
+				.contextPath(CONTEXT_PATH)
+				.contentType(APPLICATION_JSON)
+				.content("""
+						{
+						  "nome": "Teclado mecanico atualizado",
+						  "descricao": "Teclado mecanico ABNT2 com iluminacao RGB",
+						  "preco": 275.00,
+						  "quantidadeEstoque": 15
+						}
+						""")
 				.header(AUTHORIZATION, "Bearer " + TOKEN_VALIDO))
 				.andExpect(status().isBadRequest())
 				.andExpect(jsonPath("$.mensagem").value("Identificador do produto invalido."));

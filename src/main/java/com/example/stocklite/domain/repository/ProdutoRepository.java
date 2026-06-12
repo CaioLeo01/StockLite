@@ -9,6 +9,8 @@ public interface ProdutoRepository {
 
 	boolean existsByNomeIgnoreCase(String nome);
 
+	Optional<Produto> findByNomeIgnoreCase(String nome);
+
 	Optional<Produto> findById(Integer idProduto);
 
 	List<Produto> findAll();
