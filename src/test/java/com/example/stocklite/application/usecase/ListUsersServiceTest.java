@@ -65,7 +65,7 @@ class ListUsersServiceTest {
 	}
 
 	@Test
-	void deveListarUsuariosAtivosEInativosQuandoAutenticadoForValidoEAtivo() {
+	void deveListarApenasUsuariosAtivosQuandoAutenticadoForValidoEAtivo() {
 		AuthenticatedUser usuarioAutenticado = new AuthenticatedUser(1, "admin@email.com", "ADMIN");
 
 		Usuario usuarioAdminAtivo = new Usuario();
@@ -80,11 +80,11 @@ class ListUsersServiceTest {
 
 		List<UsuarioListagemResponse> response = listUsersService.listar(usuarioAutenticado);
 
-		assertEquals(3, response.size());
+		assertEquals(2, response.size());
 		assertEquals(new UsuarioListagemResponse(1, "Administrador", "admin@email.com", 1, "ADMIN", Boolean.TRUE),
 				response.getFirst());
-		assertEquals(new UsuarioListagemResponse(3, "Carlos Lima", "carlos@email.com", 2, "OPERADOR", Boolean.FALSE),
-				response.get(2));
+		assertEquals(new UsuarioListagemResponse(2, "Maria Souza", "maria@email.com", 2, "OPERADOR", Boolean.TRUE),
+				response.get(1));
 		verify(usuarioRepository).findAll();
 	}
 

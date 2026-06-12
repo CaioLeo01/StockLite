@@ -27,6 +27,7 @@ public class ListUsersService {
 		authenticatedUserValidator.validarUsuarioAtivo(usuarioAutenticado, null);
 
 		return usuarioRepository.findAll().stream()
+				.filter(usuario -> !usuario.estaInativo())
 				.map(this::toResponse)
 				.toList();
 	}
