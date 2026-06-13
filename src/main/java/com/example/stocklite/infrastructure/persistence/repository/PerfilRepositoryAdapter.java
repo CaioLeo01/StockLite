@@ -1,5 +1,6 @@
 package com.example.stocklite.infrastructure.persistence.repository;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.stereotype.Repository;
@@ -19,6 +20,13 @@ public class PerfilRepositoryAdapter implements PerfilRepository {
 			PerfilPersistenceMapper perfilPersistenceMapper) {
 		this.springDataPerfilRepository = springDataPerfilRepository;
 		this.perfilPersistenceMapper = perfilPersistenceMapper;
+	}
+
+	@Override
+	public List<Perfil> findAll() {
+		return springDataPerfilRepository.findAll().stream()
+				.map(perfilPersistenceMapper::toDomain)
+				.toList();
 	}
 
 	@Override
