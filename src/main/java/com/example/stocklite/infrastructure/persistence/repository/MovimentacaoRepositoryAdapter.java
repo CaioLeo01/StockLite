@@ -27,4 +27,10 @@ public class MovimentacaoRepositoryAdapter implements MovimentacaoRepository {
 				.map(movimentacaoPersistenceMapper::toDomain)
 				.toList();
 	}
+
+	@Override
+	public MovimentacaoEstoque save(MovimentacaoEstoque movimentacao) {
+		return movimentacaoPersistenceMapper.toDomain(
+				springDataMovimentacaoRepository.save(movimentacaoPersistenceMapper.toEntity(movimentacao)));
+	}
 }

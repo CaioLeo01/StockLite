@@ -7,4 +7,6 @@ import com.example.stocklite.domain.model.MovimentacaoEstoque;
 public interface MovimentacaoRepository {
 
 	List<MovimentacaoEstoque> findAllOrderByDataMovimentacaoDesc();
+
+	MovimentacaoEstoque save(MovimentacaoEstoque movimentacao);
 }

@@ -35,4 +35,22 @@ public class MovimentacaoPersistenceMapper {
 				.dataAtualizacao(entity.getDataAtualizacao())
 				.build();
 	}
+
+	public MovimentacaoEstoqueEntity toEntity(MovimentacaoEstoque domain) {
+		if (domain == null) {
+			return null;
+		}
+
+		return MovimentacaoEstoqueEntity.builder()
+				.idMovimentacao(domain.getIdMovimentacao())
+				.produto(produtoPersistenceMapper.toEntity(domain.getProduto()))
+				.usuario(usuarioPersistenceMapper.toEntity(domain.getUsuario()))
+				.tipo(domain.getTipo())
+				.quantidade(domain.getQuantidade())
+				.dataMovimentacao(domain.getDataMovimentacao())
+				.observacao(domain.getObservacao())
+				.dataCriacao(domain.getDataCriacao())
+				.dataAtualizacao(domain.getDataAtualizacao())
+				.build();
+	}
 }

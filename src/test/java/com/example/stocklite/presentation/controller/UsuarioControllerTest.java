@@ -31,11 +31,14 @@ import com.example.stocklite.application.port.TokenService;
 import com.example.stocklite.application.security.AuthenticatedUser;
 import com.example.stocklite.application.usecase.InactivateUserResult;
 import com.example.stocklite.application.usecase.InactivateUserService;
+import com.example.stocklite.application.usecase.ListarMovimentacoesService;
 import com.example.stocklite.application.usecase.ListUsersService;
+import com.example.stocklite.application.usecase.RegistrarEntradaEstoqueService;
 import com.example.stocklite.application.usecase.UpdateUserService;
 import com.example.stocklite.domain.repository.PerfilRepository;
 import com.example.stocklite.domain.repository.UsuarioRepository;
 import com.example.stocklite.infrastructure.persistence.repository.SpringDataPerfilRepository;
+import com.example.stocklite.infrastructure.persistence.repository.SpringDataMovimentacaoRepository;
 import com.example.stocklite.infrastructure.persistence.repository.SpringDataProdutoRepository;
 import com.example.stocklite.infrastructure.persistence.repository.SpringDataUsuarioRepository;
 
@@ -63,6 +66,12 @@ class UsuarioControllerTest {
 	private UpdateUserService updateUserService;
 
 	@MockitoBean
+	private ListarMovimentacoesService listarMovimentacoesService;
+
+	@MockitoBean
+	private RegistrarEntradaEstoqueService registrarEntradaEstoqueService;
+
+	@MockitoBean
 	private TokenService tokenService;
 
 	@MockitoBean
@@ -79,6 +88,9 @@ class UsuarioControllerTest {
 
 	@MockitoBean
 	private SpringDataProdutoRepository springDataProdutoRepository;
+
+	@MockitoBean
+	private SpringDataMovimentacaoRepository springDataMovimentacaoRepository;
 
 	@MockitoBean
 	private PasswordHasher passwordHasher;
