@@ -143,6 +143,7 @@ Com base no codigo atual deste repositorio, ja estao implementados:
 - `POST /auth/register`
 - `POST /auth/login`
 - `GET /health`
+- `GET /perfis`
 - `GET /usuarios`
 - `PUT /usuarios/{id}`
 - `DELETE /usuarios/{id}`
@@ -152,8 +153,8 @@ Com base no codigo atual deste repositorio, ja estao implementados:
 - `PUT /produtos/{id}`
 - `DELETE /produtos/{id}`
 - `GET /movimentacoes`
-
-Importante: a proposta funcional menciona endpoints de **entrada** e **saida** de estoque, mas no estado atual do codigo esses endpoints ainda nao aparecem expostos pelos controllers. O README distingue essa proposta do que ja esta implementado para evitar documentacao enganosa.
+- `POST /movimentacoes/entrada`
+- `POST /movimentacoes/saida`
 
 ## Como executar
 
@@ -291,6 +292,10 @@ Documentos adicionais do projeto:
 - `PUT /v1/api/usuarios/{id}` - `ADMIN`
 - `DELETE /v1/api/usuarios/{id}` - `ADMIN`
 
+### Perfis
+
+- `GET /v1/api/perfis` - `ADMIN`
+
 ### Produtos
 
 - `POST /v1/api/produtos` - `ADMIN`, `ESTOQUISTA`
@@ -302,6 +307,8 @@ Documentos adicionais do projeto:
 ### Movimentacoes
 
 - `GET /v1/api/movimentacoes` - `ADMIN`, `ESTOQUISTA`, `VISUALIZADOR`
+- `POST /v1/api/movimentacoes/entrada` - `ADMIN`, `ESTOQUISTA`
+- `POST /v1/api/movimentacoes/saida` - `ADMIN`, `ESTOQUISTA`
 
 ## Banco de dados e migracoes
 
