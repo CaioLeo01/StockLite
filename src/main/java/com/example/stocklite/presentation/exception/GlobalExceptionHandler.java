@@ -18,6 +18,7 @@ import com.example.stocklite.application.exception.AuthenticatedUserInactiveOrNo
 import com.example.stocklite.application.exception.DefaultProfileNotFoundException;
 import com.example.stocklite.application.exception.EmailAlreadyInUseException;
 import com.example.stocklite.application.exception.InactiveProductMovementNotAllowedException;
+import com.example.stocklite.application.exception.InsufficientStockException;
 import com.example.stocklite.application.exception.InvalidCredentialsException;
 import com.example.stocklite.application.exception.ProductAlreadyExistsException;
 import com.example.stocklite.application.exception.ProductNotFoundException;
@@ -67,6 +68,11 @@ public class GlobalExceptionHandler {
 	public ResponseEntity<ErrorResponse> handleInactiveProductMovementNotAllowed(
 			InactiveProductMovementNotAllowedException exception) {
 		return criarResposta(HttpStatus.FORBIDDEN, exception.getMessage());
+	}
+
+	@ExceptionHandler(InsufficientStockException.class)
+	public ResponseEntity<ErrorResponse> handleInsufficientStock(InsufficientStockException exception) {
+		return criarResposta(HttpStatus.CONFLICT, exception.getMessage());
 	}
 
 	@ExceptionHandler(InvalidCredentialsException.class)

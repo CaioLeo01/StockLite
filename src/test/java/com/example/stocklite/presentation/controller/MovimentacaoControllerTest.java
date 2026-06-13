@@ -20,14 +20,17 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import com.example.stocklite.application.dto.MovimentacaoResponse;
 import com.example.stocklite.application.dto.RegistrarEntradaResponse;
+import com.example.stocklite.application.dto.RegistrarSaidaResponse;
 import com.example.stocklite.application.exception.AuthenticatedUserInactiveOrNotFoundException;
 import com.example.stocklite.application.exception.InactiveProductMovementNotAllowedException;
+import com.example.stocklite.application.exception.InsufficientStockException;
 import com.example.stocklite.application.exception.ProductNotFoundException;
 import com.example.stocklite.application.port.PasswordHasher;
 import com.example.stocklite.application.port.TokenService;
 import com.example.stocklite.application.security.AuthenticatedUser;
 import com.example.stocklite.application.usecase.ListarMovimentacoesService;
 import com.example.stocklite.application.usecase.RegistrarEntradaEstoqueService;
+import com.example.stocklite.application.usecase.RegistrarSaidaEstoqueService;
 import com.example.stocklite.domain.repository.MovimentacaoRepository;
 import com.example.stocklite.domain.repository.PerfilRepository;
 import com.example.stocklite.domain.repository.ProdutoRepository;
@@ -56,6 +59,9 @@ class MovimentacaoControllerTest {
 
 	@MockitoBean
 	private RegistrarEntradaEstoqueService registrarEntradaEstoqueService;
+
+	@MockitoBean
+	private RegistrarSaidaEstoqueService registrarSaidaEstoqueService;
 
 	@MockitoBean
 	private TokenService tokenService;
@@ -494,6 +500,302 @@ class MovimentacaoControllerTest {
 						{
 						  "produtoId": 10,
 						  "quantidade": 20,
+						  "observacao": "%s"
+						}
+						""".formatted("x".repeat(256)))
+				.header(AUTHORIZATION, "Bearer " + TOKEN_VALIDO))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.mensagem").value("A observacao deve ter no maximo 255 caracteres."));
+	}
+
+	@Test
+	void deveRegistrarSaidaQuandoTokenForValidoEUsuarioForAdmin() throws Exception {
+		AuthenticatedUser usuarioAutenticado = new AuthenticatedUser(1, "admin@email.com", "ADMIN");
+
+		when(tokenService.parseToken(TOKEN_VALIDO)).thenReturn(usuarioAutenticado);
+		when(registrarSaidaEstoqueService.registrar(org.mockito.ArgumentMatchers.any(),
+				org.mockito.ArgumentMatchers.eq(usuarioAutenticado)))
+				.thenReturn(new RegistrarSaidaResponse(2, 10, "Teclado mecanico", 25));
+
+		mockMvc.perform(post("/v1/api/movimentacoes/saida")
+				.contextPath(CONTEXT_PATH)
+				.contentType(APPLICATION_JSON)
+				.content("""
+						{
+						  "produtoId": 10,
+						  "quantidade": 5,
+						  "observacao": "Retirada para uso interno"
+						}
+						""")
+				.header(AUTHORIZATION, "Bearer " + TOKEN_VALIDO))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.idMovimentacao").value(2))
+				.andExpect(jsonPath("$.produtoId").value(10))
+				.andExpect(jsonPath("$.produtoNome").value("Teclado mecanico"))
+				.andExpect(jsonPath("$.quantidadeAtual").value(25));
+	}
+
+	@Test
+	void deveRegistrarSaidaQuandoTokenForValidoEUsuarioForEstoquista() throws Exception {
+		AuthenticatedUser usuarioAutenticado = new AuthenticatedUser(2, "estoque@email.com", "ESTOQUISTA");
+
+		when(tokenService.parseToken(TOKEN_VALIDO)).thenReturn(usuarioAutenticado);
+		when(registrarSaidaEstoqueService.registrar(org.mockito.ArgumentMatchers.any(),
+				org.mockito.ArgumentMatchers.eq(usuarioAutenticado)))
+				.thenReturn(new RegistrarSaidaResponse(3, 8, "Mouse gamer", 7));
+
+		mockMvc.perform(post("/v1/api/movimentacoes/saida")
+				.contextPath(CONTEXT_PATH)
+				.contentType(APPLICATION_JSON)
+				.content("""
+						{
+						  "produtoId": 8,
+						  "quantidade": 3,
+						  "observacao": null
+						}
+						""")
+				.header(AUTHORIZATION, "Bearer " + TOKEN_VALIDO))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.idMovimentacao").value(3))
+				.andExpect(jsonPath("$.produtoNome").value("Mouse gamer"))
+				.andExpect(jsonPath("$.quantidadeAtual").value(7));
+	}
+
+	@Test
+	void deveRetornarUnauthorizedNoRegistroDeSaidaQuandoTokenNaoForInformado() throws Exception {
+		mockMvc.perform(post("/v1/api/movimentacoes/saida")
+				.contextPath(CONTEXT_PATH)
+				.contentType(APPLICATION_JSON)
+				.content("""
+						{
+						  "produtoId": 10,
+						  "quantidade": 5
+						}
+						"""))
+				.andExpect(status().isUnauthorized())
+				.andExpect(jsonPath("$.mensagem").value("Token invalido ou nao informado."));
+	}
+
+	@Test
+	void deveRetornarUnauthorizedNoRegistroDeSaidaQuandoTokenForInvalido() throws Exception {
+		when(tokenService.parseToken(TOKEN_INVALIDO)).thenThrow(new RuntimeException("Token invalido"));
+
+		mockMvc.perform(post("/v1/api/movimentacoes/saida")
+				.contextPath(CONTEXT_PATH)
+				.contentType(APPLICATION_JSON)
+				.content("""
+						{
+						  "produtoId": 10,
+						  "quantidade": 5
+						}
+						""")
+				.header(AUTHORIZATION, "Bearer " + TOKEN_INVALIDO))
+				.andExpect(status().isUnauthorized())
+				.andExpect(jsonPath("$.mensagem").value("Token invalido ou nao informado."));
+	}
+
+	@Test
+	void deveRetornarForbiddenNoRegistroDeSaidaQuandoUsuarioNaoTiverPermissao() throws Exception {
+		when(tokenService.parseToken(TOKEN_VALIDO))
+				.thenReturn(new AuthenticatedUser(10, "operador@email.com", "OPERADOR"));
+
+		mockMvc.perform(post("/v1/api/movimentacoes/saida")
+				.contextPath(CONTEXT_PATH)
+				.contentType(APPLICATION_JSON)
+				.content("""
+						{
+						  "produtoId": 10,
+						  "quantidade": 5
+						}
+						""")
+				.header(AUTHORIZATION, "Bearer " + TOKEN_VALIDO))
+				.andExpect(status().isForbidden())
+				.andExpect(jsonPath("$.mensagem").value("Usuario sem permissao para executar esta acao."));
+	}
+
+	@Test
+	void deveRetornarForbiddenNoRegistroDeSaidaQuandoUsuarioAutenticadoEstiverInativoOuInexistente() throws Exception {
+		AuthenticatedUser usuarioAutenticado = new AuthenticatedUser(2, "estoque@email.com", "ESTOQUISTA");
+
+		when(tokenService.parseToken(TOKEN_VALIDO)).thenReturn(usuarioAutenticado);
+		when(registrarSaidaEstoqueService.registrar(org.mockito.ArgumentMatchers.any(),
+				org.mockito.ArgumentMatchers.eq(usuarioAutenticado)))
+				.thenThrow(new AuthenticatedUserInactiveOrNotFoundException());
+
+		mockMvc.perform(post("/v1/api/movimentacoes/saida")
+				.contextPath(CONTEXT_PATH)
+				.contentType(APPLICATION_JSON)
+				.content("""
+						{
+						  "produtoId": 10,
+						  "quantidade": 5
+						}
+						""")
+				.header(AUTHORIZATION, "Bearer " + TOKEN_VALIDO))
+				.andExpect(status().isForbidden())
+				.andExpect(jsonPath("$.mensagem").value("Usuario autenticado inexistente ou inativo."));
+	}
+
+	@Test
+	void deveRetornarNotFoundQuandoProdutoNaoExistirNoRegistroDeSaida() throws Exception {
+		AuthenticatedUser usuarioAutenticado = new AuthenticatedUser(2, "estoque@email.com", "ESTOQUISTA");
+
+		when(tokenService.parseToken(TOKEN_VALIDO)).thenReturn(usuarioAutenticado);
+		when(registrarSaidaEstoqueService.registrar(org.mockito.ArgumentMatchers.any(),
+				org.mockito.ArgumentMatchers.eq(usuarioAutenticado)))
+				.thenThrow(new ProductNotFoundException());
+
+		mockMvc.perform(post("/v1/api/movimentacoes/saida")
+				.contextPath(CONTEXT_PATH)
+				.contentType(APPLICATION_JSON)
+				.content("""
+						{
+						  "produtoId": 999,
+						  "quantidade": 5
+						}
+						""")
+				.header(AUTHORIZATION, "Bearer " + TOKEN_VALIDO))
+				.andExpect(status().isNotFound())
+				.andExpect(jsonPath("$.mensagem").value("Produto nao encontrado."));
+	}
+
+	@Test
+	void deveRetornarForbiddenQuandoProdutoEstiverInativoNoRegistroDeSaida() throws Exception {
+		AuthenticatedUser usuarioAutenticado = new AuthenticatedUser(2, "estoque@email.com", "ESTOQUISTA");
+
+		when(tokenService.parseToken(TOKEN_VALIDO)).thenReturn(usuarioAutenticado);
+		when(registrarSaidaEstoqueService.registrar(org.mockito.ArgumentMatchers.any(),
+				org.mockito.ArgumentMatchers.eq(usuarioAutenticado)))
+				.thenThrow(new InactiveProductMovementNotAllowedException());
+
+		mockMvc.perform(post("/v1/api/movimentacoes/saida")
+				.contextPath(CONTEXT_PATH)
+				.contentType(APPLICATION_JSON)
+				.content("""
+						{
+						  "produtoId": 10,
+						  "quantidade": 5
+						}
+						""")
+				.header(AUTHORIZATION, "Bearer " + TOKEN_VALIDO))
+				.andExpect(status().isForbidden())
+				.andExpect(jsonPath("$.mensagem").value("Produto inativo nao pode receber movimentacao."));
+	}
+
+	@Test
+	void deveRetornarConflictQuandoQuantidadeForInsuficienteNoRegistroDeSaida() throws Exception {
+		AuthenticatedUser usuarioAutenticado = new AuthenticatedUser(2, "estoque@email.com", "ESTOQUISTA");
+
+		when(tokenService.parseToken(TOKEN_VALIDO)).thenReturn(usuarioAutenticado);
+		when(registrarSaidaEstoqueService.registrar(org.mockito.ArgumentMatchers.any(),
+				org.mockito.ArgumentMatchers.eq(usuarioAutenticado)))
+				.thenThrow(new InsufficientStockException());
+
+		mockMvc.perform(post("/v1/api/movimentacoes/saida")
+				.contextPath(CONTEXT_PATH)
+				.contentType(APPLICATION_JSON)
+				.content("""
+						{
+						  "produtoId": 10,
+						  "quantidade": 50
+						}
+						""")
+				.header(AUTHORIZATION, "Bearer " + TOKEN_VALIDO))
+				.andExpect(status().isConflict())
+				.andExpect(jsonPath("$.mensagem").value("Quantidade insuficiente em estoque."));
+	}
+
+	@Test
+	void deveRetornarBadRequestQuandoProdutoIdNaoForInformadoNoRegistroDeSaida() throws Exception {
+		AuthenticatedUser usuarioAutenticado = new AuthenticatedUser(1, "admin@email.com", "ADMIN");
+
+		when(tokenService.parseToken(TOKEN_VALIDO)).thenReturn(usuarioAutenticado);
+
+		mockMvc.perform(post("/v1/api/movimentacoes/saida")
+				.contextPath(CONTEXT_PATH)
+				.contentType(APPLICATION_JSON)
+				.content("""
+						{
+						  "quantidade": 5
+						}
+						""")
+				.header(AUTHORIZATION, "Bearer " + TOKEN_VALIDO))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.mensagem").value("O produto e obrigatorio."));
+	}
+
+	@Test
+	void deveRetornarBadRequestQuandoQuantidadeNaoForInformadaNoRegistroDeSaida() throws Exception {
+		AuthenticatedUser usuarioAutenticado = new AuthenticatedUser(1, "admin@email.com", "ADMIN");
+
+		when(tokenService.parseToken(TOKEN_VALIDO)).thenReturn(usuarioAutenticado);
+
+		mockMvc.perform(post("/v1/api/movimentacoes/saida")
+				.contextPath(CONTEXT_PATH)
+				.contentType(APPLICATION_JSON)
+				.content("""
+						{
+						  "produtoId": 10
+						}
+						""")
+				.header(AUTHORIZATION, "Bearer " + TOKEN_VALIDO))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.mensagem").value("A quantidade e obrigatoria."));
+	}
+
+	@Test
+	void deveRetornarBadRequestQuandoQuantidadeForZeroNoRegistroDeSaida() throws Exception {
+		AuthenticatedUser usuarioAutenticado = new AuthenticatedUser(1, "admin@email.com", "ADMIN");
+
+		when(tokenService.parseToken(TOKEN_VALIDO)).thenReturn(usuarioAutenticado);
+
+		mockMvc.perform(post("/v1/api/movimentacoes/saida")
+				.contextPath(CONTEXT_PATH)
+				.contentType(APPLICATION_JSON)
+				.content("""
+						{
+						  "produtoId": 10,
+						  "quantidade": 0
+						}
+						""")
+				.header(AUTHORIZATION, "Bearer " + TOKEN_VALIDO))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.mensagem").value("A quantidade deve ser maior que zero."));
+	}
+
+	@Test
+	void deveRetornarBadRequestQuandoQuantidadeForNegativaNoRegistroDeSaida() throws Exception {
+		AuthenticatedUser usuarioAutenticado = new AuthenticatedUser(1, "admin@email.com", "ADMIN");
+
+		when(tokenService.parseToken(TOKEN_VALIDO)).thenReturn(usuarioAutenticado);
+
+		mockMvc.perform(post("/v1/api/movimentacoes/saida")
+				.contextPath(CONTEXT_PATH)
+				.contentType(APPLICATION_JSON)
+				.content("""
+						{
+						  "produtoId": 10,
+						  "quantidade": -1
+						}
+						""")
+				.header(AUTHORIZATION, "Bearer " + TOKEN_VALIDO))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.mensagem").value("A quantidade deve ser maior que zero."));
+	}
+
+	@Test
+	void deveRetornarBadRequestQuandoObservacaoUltrapassarLimiteNoRegistroDeSaida() throws Exception {
+		AuthenticatedUser usuarioAutenticado = new AuthenticatedUser(1, "admin@email.com", "ADMIN");
+
+		when(tokenService.parseToken(TOKEN_VALIDO)).thenReturn(usuarioAutenticado);
+
+		mockMvc.perform(post("/v1/api/movimentacoes/saida")
+				.contextPath(CONTEXT_PATH)
+				.contentType(APPLICATION_JSON)
+				.content("""
+						{
+						  "produtoId": 10,
+						  "quantidade": 5,
 						  "observacao": "%s"
 						}
 						""".formatted("x".repeat(256)))

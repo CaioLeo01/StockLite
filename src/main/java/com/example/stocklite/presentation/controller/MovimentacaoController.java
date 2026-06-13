@@ -15,9 +15,12 @@ import org.springframework.web.bind.annotation.RestController;
 import com.example.stocklite.application.dto.MovimentacaoResponse;
 import com.example.stocklite.application.dto.RegistrarEntradaRequest;
 import com.example.stocklite.application.dto.RegistrarEntradaResponse;
+import com.example.stocklite.application.dto.RegistrarSaidaRequest;
+import com.example.stocklite.application.dto.RegistrarSaidaResponse;
 import com.example.stocklite.application.security.AuthenticatedUser;
 import com.example.stocklite.application.usecase.ListarMovimentacoesService;
 import com.example.stocklite.application.usecase.RegistrarEntradaEstoqueService;
+import com.example.stocklite.application.usecase.RegistrarSaidaEstoqueService;
 
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
@@ -29,12 +32,15 @@ public class MovimentacaoController {
 
 	private final ListarMovimentacoesService listarMovimentacoesService;
 	private final RegistrarEntradaEstoqueService registrarEntradaEstoqueService;
+	private final RegistrarSaidaEstoqueService registrarSaidaEstoqueService;
 
 	public MovimentacaoController(
 			ListarMovimentacoesService listarMovimentacoesService,
-			RegistrarEntradaEstoqueService registrarEntradaEstoqueService) {
+			RegistrarEntradaEstoqueService registrarEntradaEstoqueService,
+			RegistrarSaidaEstoqueService registrarSaidaEstoqueService) {
 		this.listarMovimentacoesService = listarMovimentacoesService;
 		this.registrarEntradaEstoqueService = registrarEntradaEstoqueService;
+		this.registrarSaidaEstoqueService = registrarSaidaEstoqueService;
 	}
 
 	@GetMapping
@@ -51,5 +57,14 @@ public class MovimentacaoController {
 			@AuthenticationPrincipal AuthenticatedUser usuarioAutenticado) {
 		return ResponseEntity.status(HttpStatus.CREATED)
 				.body(registrarEntradaEstoqueService.registrar(request, usuarioAutenticado));
+	}
+
+	@PostMapping("/saida")
+	@PreAuthorize("hasAnyRole('ADMIN','ESTOQUISTA')")
+	public ResponseEntity<RegistrarSaidaResponse> registrarSaida(
+			@Valid @RequestBody RegistrarSaidaRequest request,
+			@AuthenticationPrincipal AuthenticatedUser usuarioAutenticado) {
+		return ResponseEntity.status(HttpStatus.CREATED)
+				.body(registrarSaidaEstoqueService.registrar(request, usuarioAutenticado));
 	}
 }
