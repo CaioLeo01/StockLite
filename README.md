@@ -20,7 +20,6 @@ O sistema foi proposto para permitir cadastro de usuarios, controle de produtos,
 - [Banco de dados e migracoes](#banco-de-dados-e-migracoes)
 - [Testes](#testes)
 - [Boas praticas adotadas](#boas-praticas-adotadas)
-- [Melhorias recomendadas](#melhorias-recomendadas)
 
 ## Visao geral
 
@@ -364,19 +363,6 @@ Observacao: durante a geracao deste README, a execucao local dos testes nao foi 
 - testes automatizados para comportamentos criticos;
 - containerizacao com Docker;
 - configuracao externalizada por variaveis de ambiente.
-
-## Melhorias recomendadas
-
-Como boas praticas adicionais para evolucao do projeto, vale considerar:
-
-- nao versionar credenciais reais em arquivos de profile;
-- adicionar um `.env.example` ou secao de bootstrap de ambiente local;
-- criar endpoints explicitos para entrada e saida de estoque, alinhando implementacao e proposta funcional;
-- incluir exemplos de payloads de requisicao e resposta;
-- adicionar testes de integracao com banco e seguranca;
-- configurar pipeline CI para validar build e testes em cada PR;
-- documentar convencoes de commit, branching e versionamento;
-- adicionar diagrama simples da arquitetura e do fluxo de autenticacao.
 
 ## Licenca
 
