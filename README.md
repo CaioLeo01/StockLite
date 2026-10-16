@@ -49,6 +49,12 @@ The repository does not record the original selection history. The rationale bel
 | **Docker** | Packages the API in a repeatable image; the Dockerfile builds with Maven and runs on a Java 21 runtime image. |
 | **SpringDoc OpenAPI** | Provides an OpenAPI specification and Swagger UI for exploring and testing the HTTP API during development. |
 
+## Engineering challenges and trade-offs
+
+- **Keeping stock and movement history aligned:** each entry or exit updates the product and writes a movement record inside a database transaction. The current implementation does not lock the product row or use optimistic versioning, so concurrent movements for the same product still need additional protection.
+- **Stateless authorization:** JWTs carry the user's role, avoiding a server-side session lookup for role checks. A role change is therefore not reflected in a token that has already been issued; the configured default token lifetime is one hour.
+- **Schema evolution:** Flyway migrations version table and constraint changes. The current migrations and entity mappings target the fixed stocklite schema, so changing the schema name is not supported by configuration alone.
+
 ## Main API routes
 
 All routes use the default context path /v1/api. Protected routes require a valid JWT.
