@@ -6,9 +6,9 @@ A REST API for inventory management built with Java 21 and Spring Boot. It suppo
 
 ## The problem and solution
 
-Inventory systems need to track more than product records. They must control who can change the catalog, record who moved stock, and prevent a stock exit from exceeding the available quantity.
+Inventory systems need to track more than product records. They must control who can change the catalog, record who moved stock, and check that enough stock is available when an exit is requested.
 
-StockLite addresses this with a REST API for users, products, and stock movements. Product and user deactivation is logical, and each stock movement records its type, quantity, date, product, and responsible user.
+StockLite addresses this with a REST API for users, products, and stock movements. When recording a stock exit, it checks the available quantity and records the movement with its type, quantity, date, product, and responsible user. Product and user deactivation is logical.
 
 ## Features
 
