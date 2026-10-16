@@ -33,6 +33,12 @@ The code separates the application into four areas:
 
 Dependencies point inward: application use cases depend on domain contracts, while infrastructure implements those contracts. Controllers translate HTTP requests and responses; the business rules remain in use cases.
 
+### Why Clean Architecture?
+
+I chose Clean Architecture to keep StockLite's business rules and use cases independent from HTTP controllers, database access, and framework details. In this project, the application layer depends on domain contracts, while infrastructure implements them. This separation makes the business logic easier to test and helps contain changes to external technologies within the adapters and configuration.
+
+The trade-off is additional layers, interfaces, and code compared with a simpler layered CRUD application. For a small project, that structure can feel heavier than necessary. I chose it because StockLite is also meant to demonstrate separation of concerns and maintainable backend design; it is a design choice, not a claim that Clean Architecture is the best fit for every application.
+
 ## Technology choices and alternatives
 
 These choices reflect the practical reasons for selecting the technologies for StockLite. The alternatives could also implement the same system; the trade-offs below explain why this stack was a suitable fit for the project's goals.
