@@ -1,45 +1,35 @@
-# Swagger em Desenvolvimento
+# Swagger and OpenAPI in Development
 
-Este projeto habilita o Swagger apenas no profile `dev`.
+Swagger UI and the OpenAPI JSON endpoint are disabled by default. Setting the Spring profile to dev alone does not enable them; the application properties default both switches to false.
 
-## Como acessar
+## Enable the documentation endpoints
 
-1. Inicie a aplicacao com o profile de desenvolvimento ativo.
-2. Abra a interface do Swagger no navegador.
+Set these environment variables before starting the application:
 
-Link em `dev`:
-
-- Swagger UI: `http://localhost:8080/v1/api/swagger-ui/index.html`
-- OpenAPI JSON: `http://localhost:8080/v1/api/v3/api-docs`
-
-## Como subir a aplicacao em dev
-
-O `application.properties` ja define `dev` como profile padrao via `spring.profiles.active=${SPRING_PROFILES_ACTIVE:dev}`.
-
-Para executar localmente:
-
-```bash
+~~~bash
+export SPRING_PROFILES_ACTIVE=dev
+export SPRINGDOC_SWAGGER_UI_ENABLED=true
+export SPRINGDOC_API_DOCS_ENABLED=true
 ./mvnw spring-boot:run
-```
+~~~
 
-Se quiser forcar explicitamente o profile `dev`:
+You can also configure the same variables in your local environment file, provided that file is not committed.
 
-```bash
-./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
-```
+## Local URLs
 
-## O que fica habilitado nesse ambiente
+With the default port and context path:
 
-- `springdoc.swagger-ui.enabled=true`
-- `springdoc.api-docs.enabled=true`
-- `server.port=8080`
-- `org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.3`
+- Swagger UI: http://localhost:8080/v1/api/swagger-ui/index.html
+- OpenAPI JSON: http://localhost:8080/v1/api/v3/api-docs
 
-## Observacoes de uso
+The context path defaults to /v1/api. If PORT or SERVER_PORT changes the port, replace 8080 in the URLs.
 
-- A interface do Swagger so deve responder quando a aplicacao estiver no profile `dev`.
-- Se a porta for alterada pela variavel `SERVER_PORT`, ajuste o link trocando `8080` pela porta configurada.
-- O endpoint `/v3/api-docs` pode ser usado para integracoes, testes e importacao da especificacao OpenAPI.
-- Se o navegador continuar retornando `404`, confirme se as dependencias Maven foram baixadas e se a aplicacao foi reiniciada apos a inclusao do starter do SpringDoc.
-- Nao use `/swagger-ui/index.html` como URL principal neste projeto. Use `/swagger-ui.html`.
-- Se `/v3/api-docs` abrir e `/swagger-ui.html` nao abrir, a aplicacao provavelmente ainda nao foi reiniciada com a nova dependencia.
+## Security note
+
+Keep the Swagger UI and OpenAPI endpoints disabled in production unless you have an explicit operational reason to expose them. The application defaults both settings to false.
+
+## Configuration reference
+
+- springdoc.swagger-ui.enabled is controlled by SPRINGDOC_SWAGGER_UI_ENABLED.
+- springdoc.api-docs.enabled is controlled by SPRINGDOC_API_DOCS_ENABLED.
+- Both variables default to false in src/main/resources/application.properties.
