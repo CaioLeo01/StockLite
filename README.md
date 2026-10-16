@@ -33,27 +33,19 @@ The code separates the application into four areas:
 
 Dependencies point inward: application use cases depend on domain contracts, while infrastructure implements those contracts. Controllers translate HTTP requests and responses; the business rules remain in use cases.
 
-## Why this stack fits the project
+## Technology choices and alternatives
 
-The repository does not record the original selection history. The rationale below explains how the current technologies fit the implementation; it should not be read as a claim about the original decision-maker's motivation.
+The rationale below describes why this stack is a defensible fit for StockLite. The repository does not contain a decision log from the time the technologies were selected, so these are engineering reasons based on the implemented system, not claims about an undocumented historical discussion.
 
-| Technology | Why it fits this project |
-| --- | --- |
-| **Java 21** | Provides a statically typed, object-oriented foundation for expressing inventory rules and keeping a maintainable backend codebase. |
-| **Spring Boot and Spring MVC** | Provide the web application structure, dependency injection, REST endpoints, validation, and integration with persistence and security used by the API. |
-| **Spring Security and JWT** | Support stateless authentication and role-based authorization for the ADMIN, ESTOQUISTA, and VISUALIZADOR profiles. Passwords are hashed with BCrypt. |
-| **PostgreSQL** | Fits the relational data model: users, profiles, products, and movements have defined relationships and constraints. The migrations use foreign keys, unique indexes, and checks. |
-| **Spring Data JPA** | Provides repository-based persistence for the relational model, while adapters keep framework-specific persistence behind domain contracts. |
-| **Flyway** | Keeps database schema changes in ordered, version-controlled migrations rather than relying on automatic Hibernate schema generation. |
-| **Maven Wrapper** | Lets contributors use the project's Maven build without requiring a separately installed Maven version. |
-| **Docker** | Packages the API in a repeatable image; the Dockerfile builds with Maven and runs on a Java 21 runtime image. |
-| **SpringDoc OpenAPI** | Provides an OpenAPI specification and Swagger UI for exploring and testing the HTTP API during development. |
-
-## Engineering challenges and trade-offs
-
-- **Keeping stock and movement history aligned:** each entry or exit updates the product and writes a movement record inside a database transaction. The current implementation does not lock the product row or use optimistic versioning, so concurrent movements for the same product still need additional protection.
-- **Stateless authorization:** JWTs carry the user's role, avoiding a server-side session lookup for role checks. A role change is therefore not reflected in a token that has already been issued; the configured default token lifetime is one hour.
-- **Schema evolution:** Flyway migrations version table and constraint changes. The current migrations and entity mappings target the fixed stocklite schema, so changing the schema name is not supported by configuration alone.
+| Choice | Why it fits StockLite | Alternative and trade-off |
+| --- | --- | --- |
+| **PostgreSQL** | The system has related users, profiles, products, and stock movements. Its migrations use foreign keys, unique indexes, and check constraints to enforce data integrity close to the database. PostgreSQL also integrates directly with the project's Spring Data JPA and Flyway setup. | **MySQL** can also model this relational system and enforce these kinds of rules. The repository contains no benchmark showing PostgreSQL is faster or universally better; the choice is a good fit for the current data model and existing project setup. |
+| **Java 21** | Java's static typing and object-oriented model suit explicit business rules and domain types such as Product, User, Profile, and StockMovement. Java is also the backend stack the project is intended to demonstrate professionally. | **C#/.NET** or **Node.js** could implement the same API. Java can involve more framework setup and ceremony than a small Node.js service, while the type system and Spring ecosystem provide a structured base for this project. |
+| **Spring Boot and Spring MVC** | They provide the REST application structure and integrate with the security, validation, and persistence libraries used by StockLite. This keeps common backend concerns in one ecosystem. | A lighter framework could reduce startup and configuration overhead, but would require assembling more of those integrations separately. |
+| **Spring Data JPA** | Repository abstractions and entity mapping reduce repetitive persistence code for this relational model, while adapters keep persistence behind domain contracts. | Direct JDBC or SQL can offer more control over queries, but requires more persistence code. JPA still needs deliberate query design as the data size and performance requirements grow. |
+| **JWT with Spring Security** | Signed tokens support stateless authentication and role-based access for the three profiles without a server-side session store. | Server-side sessions make permission changes and revocation easier to apply immediately, but require session storage and coordination. With JWT, a role change may not be reflected in an already issued token until it expires; the default lifetime is one hour. |
+| **Flyway** | Versioned SQL migrations make schema changes explicit, ordered, and repeatable across environments. | Hibernate schema generation can be convenient during early development, but explicit migrations provide better control over database changes. |
+| **Docker and Maven Wrapper** | The wrapper standardizes the project build command, and Docker packages the application in a Java 21 runtime image after a Maven build stage. | Running directly on a host avoids container setup, but can make environment differences harder to reproduce. |
 
 ## Main API routes
 
